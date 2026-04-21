@@ -96,7 +96,10 @@ pkill -f "python3 app.py"
 |--------|----------|-------------|
 | GET | `/` | POS frontend |
 | GET | `/api/products` | List all menu items |
+| POST | `/api/products` | Add new menu item |
+| PATCH | `/api/products/:id` | Update menu item (name, price, availability) |
 | GET | `/api/orders` | List recent orders |
 | POST | `/api/orders` | Create new order |
 | PATCH | `/api/orders/:id` | Update order status |
+| DELETE | `/api/orders/:id` | Cancel/delete order |
 | GET | `/api/stats` | Today's stats |
