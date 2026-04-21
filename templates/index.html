@@ -27,8 +27,9 @@
         .menu-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 0.75rem; }
         .menu-item { background: white; border-radius: 10px; padding: 1rem; text-align: center; cursor: pointer; transition: all 0.15s; box-shadow: 0 1px 4px rgba(0,0,0,0.06); border: 2px solid transparent; }
         .menu-item:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.1); border-color: #FF6B6B; }
-        .menu-item .name { font-weight: 600; font-size: 0.875rem; margin-bottom: 0.5rem; }
-        .menu-item .price { color: #FF6B6B; font-weight: 700; }
+        .menu-item .image { font-size: 2rem; margin-bottom: 0.5rem; }
+        .menu-item .name { font-weight: 600; font-size: 0.875rem; margin-bottom: 0.25rem; }
+        .menu-item .price { color: #FF6B6B; font-weight: 700; font-size: 0.8rem; }
 
         .order-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; padding-bottom: 1rem; border-bottom: 1px solid #EEE; }
         .order-title { font-size: 1.125rem; font-weight: 600; }
@@ -75,6 +76,11 @@
         .menu-item.unavailable { opacity: 0.4; cursor: not-allowed; pointer-events: none; }
         .menu-item.unavailable:hover { border-color: transparent; transform: none; }
 
+        .admin-bar { background: #1E2526; padding: 0.5rem 2rem; display: flex; align-items: center; gap: 1rem; }
+        .admin-bar span { color: #AAA; font-size: 0.875rem; }
+        .admin-bar button { background: #FF6B6B; color: white; border: none; padding: 0.4rem 0.75rem; border-radius: 6px; cursor: pointer; font-size: 0.8rem; }
+        .admin-bar button:hover { background: #E55A5A; }
+
         /* Modal styles */
         .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); display: none; align-items: center; justify-content: center; z-index: 1000; }
         .modal-overlay.active { display: flex; }
@@ -97,6 +103,29 @@
         .payment-option.selected { border-color: #FF6B6B; background: #FFF5F5; }
         .payment-option input { display: none; }
         .payment-option .icon { font-size: 1.25rem; }
+
+        /* Toggle switch */
+        .toggle-switch { position: relative; width: 44px; height: 24px; }
+        .toggle-switch input { opacity: 0; width: 0; height: 0; }
+        .toggle-slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #CCC; transition: 0.2s; border-radius: 24px; }
+        .toggle-slider:before { position: absolute; content: ""; height: 18px; width: 18px; left: 3px; bottom: 3px; background-color: white; transition: 0.2s; border-radius: 50%; }
+        .toggle-switch input:checked + .toggle-slider { background-color: #FF6B6B; }
+        .toggle-switch input:checked + .toggle-slider:before { transform: translateX(20px); }
+
+        /* QR Payment option */
+        .qr-option { flex-direction: column; align-items: center; gap: 0.25rem; }
+        .qr-code { width: 80px; height: 80px; background: #FFF; border: 2px solid #EEE; border-radius: 8px; display: flex; align-items: center; justify-content: center; margin: 0.5rem auto; font-size: 0.7rem; color: #AAA; }
+
+        /* Image picker in modal */
+        .image-picker { display: flex; flex-wrap: wrap; gap: 0.5rem; justify-content: center; margin: 0.75rem 0; }
+        .image-picker .image-option { width: 48px; height: 48px; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; border: 2px solid #EEE; border-radius: 8px; cursor: pointer; transition: all 0.15s; background: white; }
+        .image-picker .image-option:hover { border-color: #FF6B6B; }
+        .image-picker .image-option.selected { border-color: #FF6B6B; background: #FFF5F5; }
+
+        /* Manage mode item */
+        .menu-item-manage { display: flex; align-items: center; gap: 0.75rem; }
+        .menu-item-info { flex: 1; text-align: left; }
+        .menu-item-toggle { flex-shrink: 0; }
 
         @media (max-width: 768px) {
             .main { grid-template-columns: 1fr; }
@@ -207,11 +236,29 @@
                         <span class="icon">💳</span>
                         <span>Card/UPI</span>
                     </label>
+                    <label class="payment-option qr-option" onclick="selectPayment(this)">
+                        <input type="radio" name="payment" value="qr">
+                        <span class="icon">📱</span>
+                        <span>QR Code</span>
+                        <div class="qr-code">QR</div>
+                    </label>
                 </div>
             </div>
             <div class="modal-actions">
                 <button class="btn" style="background: #EEE;" onclick="closePaymentModal()">Cancel</button>
                 <button class="btn btn-pay" onclick="confirmPayment()">Confirm</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Product Modal -->
+    <div class="modal-overlay" id="addProductModal">
+        <div class="modal">
+            <div class="modal-title">Add Menu Item</div>
+            <div class="modal-body" id="addProductBody"></div>
+            <div class="modal-actions">
+                <button class="btn" style="background: #EEE;" onclick="closeAddProductModal()">Cancel</button>
+                <button class="btn btn-print" onclick="confirmAddProduct()">Add Item</button>
             </div>
         </div>
     </div>
@@ -267,21 +314,51 @@
         }
 
         function showAddProduct() {
-            const name = prompt('Item name:');
-            if (!name) return;
-            const category = prompt('Category (Beverages/Food/Snacks):', 'Food');
-            const price = prompt('Price in Rs:', '50');
-            if (!category || !price) return;
+            const emojiOptions = ['☕', '🥤', '🧊', '🍋', '🍵', '🍫', '🧃', '🥛', '🥪', '🧀', '🍚', '🥘', '🍛', '🫘', '🌶️', '🥞', '🥟', '🍞', '🍳', '🟤', '🟡', '🫛', '🍪', '🍽️', '🍺', '🧁', '🥗'];
+            let selectedImage = '🍽️';
+            const html = `
+                <div style="display:flex;flex-direction:column;gap:0.75rem;">
+                    <input type="text" id="newName" placeholder="Item name" style="padding:0.5rem;border:1px solid #DDD;border-radius:6px;font-size:1rem;">
+                    <select id="newCategory" style="padding:0.5rem;border:1px solid #DDD;border-radius:6px;font-size:1rem;">
+                        <option value="Beverages">Beverages</option>
+                        <option value="Food">Food</option>
+                        <option value="Snacks">Snacks</option>
+                    </select>
+                    <input type="number" id="newPrice" placeholder="Price in Rs" style="padding:0.5rem;border:1px solid #DDD;border-radius:6px;font-size:1rem;">
+                    <div style="font-size:0.875rem;color:#666;text-align:center;">Select Icon</div>
+                    <div class="image-picker">
+                        ${emojiOptions.map(e => `<div class="image-option ${e === selectedImage ? 'selected' : ''}" onclick="this.parentElement.querySelectorAll('.image-option').forEach(el=>el.classList.remove('selected'));this.classList.add('selected');this.dataset.emoji='${e}';">${e}</div>`).join('')}
+                    </div>
+                </div>
+            `;
+            document.getElementById('addProductBody').innerHTML = html;
+            document.getElementById('addProductModal').classList.add('active');
+        }
 
-            fetch('/api/products', {
+        async function confirmAddProduct() {
+            const name = document.getElementById('newName').value;
+            const category = document.getElementById('newCategory').value;
+            const price = document.getElementById('newPrice').value;
+            const selectedEmoji = document.querySelector('.image-option.selected');
+            const image = selectedEmoji ? selectedEmoji.dataset.emoji : '🍽️';
+            if (!name || !price) return;
+
+            await fetch('/api/products', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     name,
                     category,
-                    price: parseInt(price) * 100
+                    price: parseInt(price) * 100,
+                    image
                 })
-            }).then(() => loadProducts());
+            });
+            closeAddProductModal();
+            await loadProducts();
+        }
+
+        function closeAddProductModal() {
+            document.getElementById('addProductModal').classList.remove('active');
         }
 
         function clearOrder() {
@@ -434,16 +511,66 @@
             `).join('');
         }
 
+        function renderOrder() {
+            const container = document.getElementById('orderItems');
+            if (currentOrder.length === 0) {
+                container.innerHTML = '<div class="order-empty">Tap menu items to add</div>';
+                document.getElementById('subtotal').textContent = 'Rs 0.00';
+                document.getElementById('gstAmount').textContent = 'Rs 0.00';
+                document.getElementById('totalAmount').textContent = 'Rs 0.00';
+                return;
+            }
+
+            container.innerHTML = currentOrder.map((item, i) => `
+                <div class="order-item">
+                    <div class="order-item-info">
+                        <div class="order-item-name">${item.name}</div>
+                        <div class="order-item-price">Rs ${(item.price / 100).toFixed(0)}</div>
+                    </div>
+                    <div class="order-item-qty">
+                        <button class="qty-btn" onclick="changeQty(${i}, -1)">−</button>
+                        <span class="qty-value">${item.quantity}</span>
+                        <button class="qty-btn" onclick="changeQty(${i}, 1)">+</button>
+                    </div>
+                </div>
+            `).join('');
+
+            const subtotal = currentOrder.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+            const gst = Math.round(subtotal * 0.05);
+            const total = subtotal + gst;
+            document.getElementById('subtotal').textContent = 'Rs ' + (subtotal / 100).toFixed(2);
+            document.getElementById('gstAmount').textContent = 'Rs ' + (gst / 100).toFixed(2);
+            document.getElementById('totalAmount').textContent = 'Rs ' + (total / 100).toFixed(2);
+        }
+
         function renderMenu() {
             const filtered = currentCategory === 'All' ? products : products.filter(p => p.category === currentCategory);
             const grid = document.getElementById('menuGrid');
-            grid.innerHTML = filtered.map(p => `
-                <div class="menu-item ${!p.is_available ? 'unavailable' : ''}" onclick="${p.is_available ? `addToOrder(${p.id})` : ''}">
-                    <div class="name">${p.name}</div>
-                    <div class="price">Rs ${(p.price / 100).toFixed(0)}</div>
-                    ${manageMode ? `<button class="btn-small" onclick="event.stopPropagation(); toggleAvailability(${p.id})">${p.is_available ? 'Disable' : 'Enable'}</button>` : ''}
-                </div>
-            `).join('');
+            if (manageMode) {
+                grid.innerHTML = filtered.map(p => `
+                    <div class="menu-item menu-item-manage">
+                        <div class="menu-item-info">
+                            <div class="image">${p.image || '🍽️'}</div>
+                            <div class="name">${p.name}</div>
+                            <div class="price">Rs ${(p.price / 100).toFixed(0)}</div>
+                        </div>
+                        <div class="menu-item-toggle">
+                            <label class="toggle-switch">
+                                <input type="checkbox" ${p.is_available ? 'checked' : ''} onchange="toggleAvailability(${p.id})">
+                                <span class="toggle-slider"></span>
+                            </label>
+                        </div>
+                    </div>
+                `).join('');
+            } else {
+                grid.innerHTML = filtered.map(p => `
+                    <div class="menu-item ${!p.is_available ? 'unavailable' : ''}" onclick="${p.is_available ? `addToOrder(${p.id})` : ''}">
+                        <div class="image">${p.image || '🍽️'}</div>
+                        <div class="name">${p.name}</div>
+                        <div class="price">Rs ${(p.price / 100).toFixed(0)}</div>
+                    </div>
+                `).join('');
+            }
         }
 
         async function createOrder(status) {

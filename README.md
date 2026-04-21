@@ -4,14 +4,15 @@ A simple point-of-sale system for an Indian cafe, built with Python Flask and Po
 
 ## Features
 
-- **Menu display** — Grid of items by category (Beverages, Food, Snacks)
-- **Order creation** — Tap items to add to order, adjust quantities
+- **Visual menu display** — Grid of items by category with emoji icons (Beverages, Food, Snacks)
+- **Order creation** — Tap items to add to order, adjust quantities with +/- buttons
 - **Bill generation** — Calculate subtotal + 5% GST (Indian cafe standard)
 - **Order history** — View recent orders with status (pending/prepared/paid)
-- **Quick stats** — Today's sales total and order count in header
-- **Admin controls** — Add new items, enable/disable menu items
-- **Payment modal** — Cash or card payment selection
+- **Quick stats** — Today's sales total, pending count, order count in header
+- **Admin controls** — Add new items with emoji picker, toggle enable/disable menu items
+- **Payment modal** — Cash, Card/UPI, or QR code payment selection
 - **Print modal** — Preview and confirm bill before printing
+- **Manage Menu** — Toggle switches for quick enable/disable of items
 
 ## Tech Stack
 

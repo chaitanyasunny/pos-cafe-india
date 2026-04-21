@@ -21,7 +21,7 @@ A straightforward point-of-sale system for a small Indian cafe. Handles menu man
 ## Data Model
 
 ### Products
-- `id`, `name`, `category`, `price` (in paisa), `is_available`, `created_at`
+- `id`, `name`, `category`, `price` (in paisa), `is_available`, `image` (emoji), `created_at`
 
 ### Orders
 - `id`, `order_number`, `table_number`, `status` (pending/prepared/paid), `total` (in paisa), `created_at`
@@ -36,9 +36,11 @@ A straightforward point-of-sale system for a small Indian cafe. Handles menu man
 3. **Bill Generation** — Calculate subtotal + 5% GST, print bill preview
 4. **Order History** — View recent orders with status (pending/prepared/paid)
 5. **Quick Stats** — Today's sales total, pending count, order count in header
-6. **Admin Menu** — Add new items, enable/disable menu items from the UI
-7. **Payment Modal** — Select cash or card payment method
+6. **Admin Menu** — Add new items with emoji icons, toggle switch for enable/disable menu items visually
+7. **Payment Modal** — Select cash, card/UPI, or QR code payment method
 8. **Print Modal** — Preview and print bill before sending to kitchen
+9. **Visual Menu Items** — Each menu item displays an emoji icon for quick visual recognition
+10. **Image Picker** — When adding items, staff can select from emoji icons for visual representation
 
 ## API Endpoints
 
