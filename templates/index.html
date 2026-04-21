@@ -75,6 +75,11 @@
         .menu-item.unavailable { opacity: 0.4; cursor: not-allowed; pointer-events: none; }
         .menu-item.unavailable:hover { border-color: transparent; transform: none; }
 
+        .admin-bar { background: #1E2526; padding: 0.5rem 2rem; display: flex; align-items: center; gap: 1rem; }
+        .admin-bar span { color: #AAA; font-size: 0.875rem; }
+        .admin-bar button { background: #FF6B6B; color: white; border: none; padding: 0.4rem 0.75rem; border-radius: 6px; cursor: pointer; font-size: 0.8rem; }
+        .admin-bar button:hover { background: #E55A5A; }
+
         /* Modal styles */
         .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); display: none; align-items: center; justify-content: center; z-index: 1000; }
         .modal-overlay.active { display: flex; }
@@ -432,6 +437,38 @@
             tabs.innerHTML = categories.map(c => `
                 <button class="category-tab ${c === currentCategory ? 'active' : ''}" onclick="setCategory('${c}')">${c}</button>
             `).join('');
+        }
+
+        function renderOrder() {
+            const container = document.getElementById('orderItems');
+            if (currentOrder.length === 0) {
+                container.innerHTML = '<div class="order-empty">Tap menu items to add</div>';
+                document.getElementById('subtotal').textContent = 'Rs 0.00';
+                document.getElementById('gstAmount').textContent = 'Rs 0.00';
+                document.getElementById('totalAmount').textContent = 'Rs 0.00';
+                return;
+            }
+
+            container.innerHTML = currentOrder.map((item, i) => `
+                <div class="order-item">
+                    <div class="order-item-info">
+                        <div class="order-item-name">${item.name}</div>
+                        <div class="order-item-price">Rs ${(item.price / 100).toFixed(0)}</div>
+                    </div>
+                    <div class="order-item-qty">
+                        <button class="qty-btn" onclick="changeQty(${i}, -1)">−</button>
+                        <span class="qty-value">${item.quantity}</span>
+                        <button class="qty-btn" onclick="changeQty(${i}, 1)">+</button>
+                    </div>
+                </div>
+            `).join('');
+
+            const subtotal = currentOrder.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+            const gst = Math.round(subtotal * 0.05);
+            const total = subtotal + gst;
+            document.getElementById('subtotal').textContent = 'Rs ' + (subtotal / 100).toFixed(2);
+            document.getElementById('gstAmount').textContent = 'Rs ' + (gst / 100).toFixed(2);
+            document.getElementById('totalAmount').textContent = 'Rs ' + (total / 100).toFixed(2);
         }
 
         function renderMenu() {

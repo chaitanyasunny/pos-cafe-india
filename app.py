@@ -136,7 +136,7 @@ def index():
 
 @app.route('/api/products', methods=['GET'])
 def get_products():
-    products = Product.query.filter_by(is_available=True).all()
+    products = Product.query.all()
     return jsonify([p.to_dict() for p in products])
 
 
