@@ -2,6 +2,7 @@ import os
 from flask import Flask, render_template, request, jsonify
 from flask_sqlalchemy import SQLAlchemy
 from datetime import datetime, date
+import pytz
 
 app = Flask(__name__)
 app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL', 'postgresql://localhost/cafe_pos')
@@ -17,7 +18,7 @@ class Product(db.Model):
     category = db.Column(db.String(50), nullable=False)
     price = db.Column(db.Integer, nullable=False)  # in paisa
     is_available = db.Column(db.Boolean, default=True)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=datetime.now)
 
     def to_dict(self):
         return {
@@ -37,7 +38,7 @@ class Order(db.Model):
     table_number = db.Column(db.Integer, nullable=True)
     status = db.Column(db.String(20), default='pending')  # pending, prepared, paid
     total = db.Column(db.Integer, default=0)  # in paisa
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=datetime.now)
 
     items = db.relationship('OrderItem', lazy=True)
 
@@ -72,6 +73,13 @@ class OrderItem(db.Model):
             'quantity': self.quantity,
             'price': self.price
         }
+
+
+IST = pytz.timezone('Asia/Kolkata')
+
+def get_ist_now():
+    """Get current time in Indian Standard Time."""
+    return datetime.now(IST)
 
 
 def seed_products():
@@ -132,6 +140,39 @@ def get_products():
     return jsonify([p.to_dict() for p in products])
 
 
+@app.route('/api/products/<int:product_id>', methods=['PATCH'])
+def update_product(product_id):
+    product = Product.query.get_or_404(product_id)
+    data = request.json
+
+    if 'is_available' in data:
+        product.is_available = data['is_available']
+    if 'name' in data:
+        product.name = data['name']
+    if 'price' in data:
+        product.price = data['price']
+    if 'category' in data:
+        product.category = data['category']
+
+    db.session.commit()
+    return jsonify(product.to_dict())
+
+
+@app.route('/api/products', methods=['POST'])
+def create_product():
+    data = request.json
+
+    product = Product(
+        name=data['name'],
+        category=data['category'],
+        price=data['price'],
+        is_available=data.get('is_available', True)
+    )
+    db.session.add(product)
+    db.session.commit()
+    return jsonify(product.to_dict())
+
+
 @app.route('/api/orders', methods=['GET', 'POST'])
 def orders():
     if request.method == 'POST':
@@ -142,7 +183,8 @@ def orders():
             order_number=order_num,
             table_number=data.get('table_number'),
             status='pending',
-            total=0
+            total=0,
+            created_at=get_ist_now()
         )
         db.session.add(order)
         db.session.flush()
@@ -179,9 +221,15 @@ def orders():
     return jsonify([o.to_dict() for o in orders])
 
 
-@app.route('/api/orders/<int:order_id>', methods=['PATCH'])
+@app.route('/api/orders/<int:order_id>', methods=['PATCH', 'DELETE'])
 def update_order(order_id):
     order = Order.query.get_or_404(order_id)
+
+    if request.method == 'DELETE':
+        db.session.delete(order)
+        db.session.commit()
+        return jsonify({'success': True})
+
     data = request.json
 
     if 'status' in data:
@@ -195,9 +243,11 @@ def update_order(order_id):
 
 @app.route('/api/stats', methods=['GET'])
 def stats():
-    today = date.today()
+    now_ist = get_ist_now()
+    today_ist = now_ist.date()
+
     today_orders = Order.query.filter(
-        db.func.date(Order.created_at) == today
+        db.func.date(Order.created_at) == today_ist
     ).all()
 
     total_sales = sum(o.total for o in today_orders if o.status == 'paid')
