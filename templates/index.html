@@ -80,6 +80,8 @@
         .admin-bar span { color: #AAA; font-size: 0.875rem; }
         .admin-bar button { background: #FF6B6B; color: white; border: none; padding: 0.4rem 0.75rem; border-radius: 6px; cursor: pointer; font-size: 0.8rem; }
         .admin-bar button:hover { background: #E55A5A; }
+        .admin-bar .mode-indicator { margin-left: auto; font-size: 0.75rem; font-weight: 600; padding: 0.25rem 0.75rem; border-radius: 12px; background: #FF6B6B; color: white; display: none; }
+        .admin-bar .mode-indicator.active { display: inline-block; }
 
         /* Modal styles */
         .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); display: none; align-items: center; justify-content: center; z-index: 1000; }
@@ -125,7 +127,9 @@
         /* Manage mode item */
         .menu-item-manage { display: flex; align-items: center; gap: 0.75rem; }
         .menu-item-info { flex: 1; text-align: left; }
-        .menu-item-toggle { flex-shrink: 0; }
+        .menu-item-toggle { flex-shrink: 0; display: flex; align-items: center; gap: 0.5rem; }
+        .toggle-label { font-size: 0.7rem; color: #888; font-weight: 500; }
+        .toggle-label.active { color: #FF6B6B; }
 
         @media (max-width: 768px) {
             .main { grid-template-columns: 1fr; }
@@ -139,6 +143,7 @@
         <span>Admin:</span>
         <button onclick="showAddProduct()">+ Add Item</button>
         <button onclick="toggleManageMode()">Manage Menu</button>
+        <span class="mode-indicator" id="modeIndicator">📋 MANAGE MODE</span>
     </div>
 
     <div class="header">
@@ -300,6 +305,7 @@
 
         function toggleManageMode() {
             manageMode = !manageMode;
+            document.getElementById('modeIndicator').classList.toggle('active', manageMode);
             renderMenu();
         }
 
@@ -405,6 +411,12 @@
                 <div class="bill-row-display" style="font-weight: 700; border-top: 1px dashed #CCC; padding-top: 0.5rem; margin-top: 0.5rem;"><span>TOTAL</span><span>Rs ${(total / 100).toFixed(2)}</span></div>
             `;
             document.getElementById('billPreview').innerHTML = billHtml;
+            // Reset modal buttons to default (Print flow)
+            const modalActions = document.querySelector('#printModal .modal-actions');
+            modalActions.innerHTML = `
+                <button class="btn" style="background: #EEE;" onclick="closePrintModal()">Cancel</button>
+                <button class="btn btn-print" onclick="confirmPrint()">Print</button>
+            `;
             document.getElementById('printModal').classList.add('active');
         }
 
@@ -414,8 +426,12 @@
 
         async function confirmPrint() {
             await createOrder('pending');
-            closePrintModal();
-            alert('Order sent to print!');
+            // Change the print modal buttons for pending order
+            const modalActions = document.querySelector('#printModal .modal-actions');
+            modalActions.innerHTML = `
+                <button class="btn" style="background: #EEE;" onclick="closePrintModal(); currentOrder = []; renderOrder();">Close</button>
+                <button class="btn btn-print" onclick="window.print(); closePrintModal(); currentOrder = []; renderOrder();">Print</button>
+            `;
         }
 
         function openPaymentModal() {
@@ -446,10 +462,15 @@
                 return;
             }
             await createOrder('paid');
-            currentOrder = [];
-            renderOrder();
             closePaymentModal();
-            alert('Payment successful!');
+            // Show bill preview before clearing order
+            openPrintModal();
+            // Change the print modal buttons for paid order
+            const modalActions = document.querySelector('#printModal .modal-actions');
+            modalActions.innerHTML = `
+                <button class="btn" style="background: #EEE;" onclick="closePrintModal(); currentOrder = []; renderOrder();">Close</button>
+                <button class="btn btn-print" onclick="window.print(); closePrintModal(); currentOrder = []; renderOrder();">Print</button>
+            `;
         }
 
         async function updateOrderStatus(orderId, status) {
@@ -555,6 +576,7 @@
                             <div class="price">Rs ${(p.price / 100).toFixed(0)}</div>
                         </div>
                         <div class="menu-item-toggle">
+                            <span class="toggle-label ${p.is_available ? 'active' : ''}">${p.is_available ? 'ON' : 'OFF'}</span>
                             <label class="toggle-switch">
                                 <input type="checkbox" ${p.is_available ? 'checked' : ''} onchange="toggleAvailability(${p.id})">
                                 <span class="toggle-slider"></span>
