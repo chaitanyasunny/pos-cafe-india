@@ -75,13 +75,28 @@
         .menu-item.unavailable { opacity: 0.4; cursor: not-allowed; pointer-events: none; }
         .menu-item.unavailable:hover { border-color: transparent; transform: none; }
 
-        .admin-bar { background: #F8F8F8; padding: 0.5rem 2rem; display: flex; gap: 1rem; align-items: center; font-size: 0.8rem; border-bottom: 1px solid #EEE; }
-        .admin-bar button { padding: 0.4rem 0.8rem; border: 1px solid #DDD; border-radius: 6px; background: white; cursor: pointer; }
-        .admin-bar button:hover { background: #F0F0F0; }
+        /* Modal styles */
+        .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); display: none; align-items: center; justify-content: center; z-index: 1000; }
+        .modal-overlay.active { display: flex; }
+        .modal { background: white; border-radius: 12px; padding: 1.5rem; width: 90%; max-width: 400px; box-shadow: 0 8px 32px rgba(0,0,0,0.2); }
+        .modal-title { font-size: 1.25rem; font-weight: 600; margin-bottom: 1rem; }
+        .modal-body { margin-bottom: 1rem; }
+        .modal-actions { display: flex; gap: 0.5rem; justify-content: flex-end; }
+        .modal-actions .btn { flex: none; min-width: 100px; }
 
-        .admin-bar { background: #F8F8F8; padding: 0.5rem 2rem; display: flex; gap: 1rem; align-items: center; font-size: 0.8rem; border-bottom: 1px solid #EEE; }
-        .admin-bar button { padding: 0.4rem 0.8rem; border: 1px solid #DDD; border-radius: 6px; background: white; cursor: pointer; }
-        .admin-bar button:hover { background: #F0F0F0; }
+        /* Bill preview styles */
+        .bill-preview { background: #FAFAFA; padding: 1rem; border-radius: 8px; font-family: monospace; font-size: 0.8rem; }
+        .bill-preview .bill-header { text-align: center; margin-bottom: 1rem; }
+        .bill-preview .bill-items { border-top: 1px dashed #CCC; border-bottom: 1px dashed #CCC; padding: 0.5rem 0; }
+        .bill-row-display { display: flex; justify-content: space-between; padding: 0.25rem 0; }
+
+        /* Payment options */
+        .payment-options { display: flex; flex-direction: column; gap: 0.5rem; }
+        .payment-option { display: flex; align-items: center; gap: 0.5rem; padding: 0.75rem; border: 2px solid #EEE; border-radius: 8px; cursor: pointer; transition: all 0.15s; }
+        .payment-option:hover { border-color: #FF6B6B; background: #FFF5F5; }
+        .payment-option.selected { border-color: #FF6B6B; background: #FFF5F5; }
+        .payment-option input { display: none; }
+        .payment-option .icon { font-size: 1.25rem; }
 
         @media (max-width: 768px) {
             .main { grid-template-columns: 1fr; }
@@ -158,10 +173,224 @@
         </div>
     </div>
 
+    <!-- Print Modal -->
+    <div class="modal-overlay" id="printModal">
+        <div class="modal">
+            <div class="modal-title">Print Bill</div>
+            <div class="modal-body">
+                <div class="bill-preview" id="billPreview"></div>
+            </div>
+            <div class="modal-actions">
+                <button class="btn" style="background: #EEE;" onclick="closePrintModal()">Cancel</button>
+                <button class="btn btn-print" onclick="confirmPrint()">Print</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Payment Modal -->
+    <div class="modal-overlay" id="paymentModal">
+        <div class="modal">
+            <div class="modal-title">Select Payment Method</div>
+            <div class="modal-body">
+                <div class="bill-row-display" style="font-weight: 600; font-size: 1rem; margin-bottom: 1rem; padding: 0.5rem 0; border-bottom: 2px solid #EEE;">
+                    <span>Total Amount</span>
+                    <span id="payTotalAmount">Rs 0.00</span>
+                </div>
+                <div class="payment-options">
+                    <label class="payment-option" onclick="selectPayment(this)">
+                        <input type="radio" name="payment" value="cash">
+                        <span class="icon">💵</span>
+                        <span>Cash</span>
+                    </label>
+                    <label class="payment-option" onclick="selectPayment(this)">
+                        <input type="radio" name="payment" value="card">
+                        <span class="icon">💳</span>
+                        <span>Card/UPI</span>
+                    </label>
+                </div>
+            </div>
+            <div class="modal-actions">
+                <button class="btn" style="background: #EEE;" onclick="closePaymentModal()">Cancel</button>
+                <button class="btn btn-pay" onclick="confirmPayment()">Confirm</button>
+            </div>
+        </div>
+    </div>
+
     <script>
+        // Global state
         let products = [];
         let currentOrder = [];
         let currentCategory = 'All';
+        let selectedPaymentMethod = null;
+        let manageMode = false;
+
+        // Core functions - declared first for global exposure
+        function addToOrder(productId) {
+            const product = products.find(p => p.id === productId);
+            const existing = currentOrder.find(item => item.product_id === productId);
+
+            if (existing) {
+                existing.quantity++;
+            } else {
+                currentOrder.push({ product_id: productId, quantity: 1, price: product.price, name: product.name });
+            }
+            renderOrder();
+        }
+
+        function changeQty(index, delta) {
+            currentOrder[index].quantity += delta;
+            if (currentOrder[index].quantity <= 0) {
+                currentOrder.splice(index, 1);
+            }
+            renderOrder();
+        }
+
+        function setCategory(cat) {
+            currentCategory = cat;
+            renderCategories();
+            renderMenu();
+        }
+
+        function toggleManageMode() {
+            manageMode = !manageMode;
+            renderMenu();
+        }
+
+        async function toggleAvailability(productId) {
+            const product = products.find(p => p.id === productId);
+            await fetch(`/api/products/${productId}`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ is_available: !product.is_available })
+            });
+            await loadProducts();
+        }
+
+        function showAddProduct() {
+            const name = prompt('Item name:');
+            if (!name) return;
+            const category = prompt('Category (Beverages/Food/Snacks):', 'Food');
+            const price = prompt('Price in Rs:', '50');
+            if (!category || !price) return;
+
+            fetch('/api/products', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    name,
+                    category,
+                    price: parseInt(price) * 100
+                })
+            }).then(() => loadProducts());
+        }
+
+        function clearOrder() {
+            currentOrder = [];
+            renderOrder();
+        }
+
+        function printBill() {
+            if (currentOrder.length === 0) {
+                alert('Please add items to the order first');
+                return;
+            }
+            openPrintModal();
+        }
+
+        function payOrder() {
+            if (currentOrder.length === 0) {
+                alert('Please add items to the order first');
+                return;
+            }
+            openPaymentModal();
+        }
+
+        function openPrintModal() {
+            const subtotal = currentOrder.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+            const gst = Math.round(subtotal * 0.05);
+            const total = subtotal + gst;
+
+            const billHtml = `
+                <div class="bill-header">
+                    <strong>CAFE POS</strong><br>
+                    <small>Order #ORD-${new Date().getHours()}${new Date().getMinutes()}${new Date().getSeconds()}</small>
+                </div>
+                <div class="bill-items">
+                    ${currentOrder.map(item => `
+                        <div class="bill-row-display">
+                            <span>${item.name} x${item.quantity}</span>
+                            <span>Rs ${(item.price * item.quantity / 100).toFixed(0)}</span>
+                        </div>
+                    `).join('')}
+                </div>
+                <div class="bill-row-display" style="margin-top: 0.5rem;"><span>Subtotal</span><span>Rs ${(subtotal / 100).toFixed(2)}</span></div>
+                <div class="bill-row-display"><span>GST (5%)</span><span>Rs ${(gst / 100).toFixed(2)}</span></div>
+                <div class="bill-row-display" style="font-weight: 700; border-top: 1px dashed #CCC; padding-top: 0.5rem; margin-top: 0.5rem;"><span>TOTAL</span><span>Rs ${(total / 100).toFixed(2)}</span></div>
+            `;
+            document.getElementById('billPreview').innerHTML = billHtml;
+            document.getElementById('printModal').classList.add('active');
+        }
+
+        function closePrintModal() {
+            document.getElementById('printModal').classList.remove('active');
+        }
+
+        async function confirmPrint() {
+            await createOrder('pending');
+            closePrintModal();
+            alert('Order sent to print!');
+        }
+
+        function openPaymentModal() {
+            const subtotal = currentOrder.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+            const gst = Math.round(subtotal * 0.05);
+            const total = subtotal + gst;
+            document.getElementById('payTotalAmount').textContent = 'Rs ' + (total / 100).toFixed(2);
+            selectedPaymentMethod = null;
+            document.querySelectorAll('.payment-option').forEach(el => el.classList.remove('selected'));
+            document.getElementById('paymentModal').classList.add('active');
+        }
+
+        function closePaymentModal() {
+            document.getElementById('paymentModal').classList.remove('active');
+        }
+
+        function selectPayment(element) {
+            document.querySelectorAll('.payment-option').forEach(el => el.classList.remove('selected'));
+            element.classList.add('selected');
+            const input = element.querySelector('input');
+            if (input) input.checked = true;
+            selectedPaymentMethod = input ? input.value : null;
+        }
+
+        async function confirmPayment() {
+            if (!selectedPaymentMethod) {
+                alert('Please select a payment method');
+                return;
+            }
+            await createOrder('paid');
+            currentOrder = [];
+            renderOrder();
+            closePaymentModal();
+            alert('Payment successful!');
+        }
+
+        async function updateOrderStatus(orderId, status) {
+            await fetch(`/api/orders/${orderId}`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ status })
+            });
+            loadStats();
+            loadRecentOrders();
+        }
+
+        async function cancelOrder(orderId) {
+            if (!confirm('Cancel this order?')) return;
+            await fetch(`/api/orders/${orderId}`, { method: 'DELETE' });
+            loadStats();
+            loadRecentOrders();
+        }
 
         async function loadProducts() {
             const res = await fetch('/api/products');
@@ -197,35 +426,12 @@
             `).join('');
         }
 
-        async function updateOrderStatus(orderId, status) {
-            await fetch(`/api/orders/${orderId}`, {
-                method: 'PATCH',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ status })
-            });
-            loadStats();
-            loadRecentOrders();
-        }
-
-        async function cancelOrder(orderId) {
-            if (!confirm('Cancel this order?')) return;
-            await fetch(`/api/orders/${orderId}`, { method: 'DELETE' });
-            loadStats();
-            loadRecentOrders();
-        }
-
         function renderCategories() {
             const categories = ['All', ...new Set(products.map(p => p.category))];
             const tabs = document.getElementById('categoryTabs');
             tabs.innerHTML = categories.map(c => `
                 <button class="category-tab ${c === currentCategory ? 'active' : ''}" onclick="setCategory('${c}')">${c}</button>
             `).join('');
-        }
-
-        function setCategory(cat) {
-            currentCategory = cat;
-            renderCategories();
-            renderMenu();
         }
 
         function renderMenu() {
@@ -238,112 +444,6 @@
                     ${manageMode ? `<button class="btn-small" onclick="event.stopPropagation(); toggleAvailability(${p.id})">${p.is_available ? 'Disable' : 'Enable'}</button>` : ''}
                 </div>
             `).join('');
-        }
-
-        let manageMode = false;
-        function toggleManageMode() {
-            manageMode = !manageMode;
-            renderMenu();
-        }
-
-        async function toggleAvailability(productId) {
-            const product = products.find(p => p.id === productId);
-            await fetch(`/api/products/${productId}`, {
-                method: 'PATCH',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ is_available: !product.is_available })
-            });
-            await loadProducts();
-        }
-
-        function showAddProduct() {
-            const name = prompt('Item name:');
-            if (!name) return;
-            const category = prompt('Category (Beverages/Food/Snacks):', 'Food');
-            const price = prompt('Price in Rs:', '50');
-            if (!category || !price) return;
-
-            fetch('/api/products', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    name,
-                    category,
-                    price: parseInt(price) * 100
-                })
-            }).then(() => loadProducts());
-        }
-
-        function addToOrder(productId) {
-            const product = products.find(p => p.id === productId);
-            const existing = currentOrder.find(item => item.product_id === productId);
-
-            if (existing) {
-                existing.quantity++;
-            } else {
-                currentOrder.push({ product_id: productId, quantity: 1, price: product.price, name: product.name });
-            }
-            renderOrder();
-        }
-
-        function changeQty(index, delta) {
-            currentOrder[index].quantity += delta;
-            if (currentOrder[index].quantity <= 0) {
-                currentOrder.splice(index, 1);
-            }
-            renderOrder();
-        }
-
-        function renderOrder() {
-            const container = document.getElementById('orderItems');
-
-            if (currentOrder.length === 0) {
-                container.innerHTML = '<div class="order-empty">Tap menu items to add</div>';
-                updateTotals(0);
-                return;
-            }
-
-            container.innerHTML = currentOrder.map((item, i) => `
-                <div class="order-item">
-                    <div class="order-item-info">
-                        <div class="order-item-name">${item.name}</div>
-                        <div class="order-item-price">Rs ${(item.price / 100).toFixed(0)} each</div>
-                    </div>
-                    <div class="order-item-qty">
-                        <button class="qty-btn" onclick="changeQty(${i}, -1)">−</button>
-                        <span class="qty-value">${item.quantity}</span>
-                        <button class="qty-btn" onclick="changeQty(${i}, 1)">+</button>
-                    </div>
-                </div>
-            `).join('');
-
-            const subtotal = currentOrder.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-            updateTotals(subtotal);
-        }
-
-        function updateTotals(subtotal) {
-            const gst = Math.round(subtotal * 0.05);
-            const total = subtotal + gst;
-            document.getElementById('subtotal').textContent = 'Rs ' + (subtotal / 100).toFixed(2);
-            document.getElementById('gstAmount').textContent = 'Rs ' + (gst / 100).toFixed(2);
-            document.getElementById('totalAmount').textContent = 'Rs ' + (total / 100).toFixed(2);
-        }
-
-        function clearOrder() {
-            currentOrder = [];
-            renderOrder();
-        }
-
-        async function printBill() {
-            if (currentOrder.length === 0) return;
-            await createOrder('pending');
-        }
-
-        async function payOrder() {
-            if (currentOrder.length === 0) return;
-            await createOrder('paid');
-            currentOrder = [];
-            renderOrder();
         }
 
         async function createOrder(status) {
