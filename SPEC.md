@@ -31,11 +31,14 @@ A straightforward point-of-sale system for a small Indian cafe. Handles menu man
 
 ## Features
 
-1. **Menu Display** — Grid of items by category (Beverages, Food, Snacks)
-2. **Order Creation** — Tap items to add to order, adjust quantities
-3. **Bill Generation** — Calculate total, show GST breakdown (5% GST standard in India for cafe)
-4. **Order History** — View past orders with status
-5. **Quick Stats** — Today's sales total and order count
+1. **Menu Display** — Grid of items by category (Beverages, Food, Snacks) with availability toggle
+2. **Order Creation** — Tap items to add to order, adjust quantities with +/- buttons
+3. **Bill Generation** — Calculate subtotal + 5% GST, print bill preview
+4. **Order History** — View recent orders with status (pending/prepared/paid)
+5. **Quick Stats** — Today's sales total, pending count, order count in header
+6. **Admin Menu** — Add new items, enable/disable menu items from the UI
+7. **Payment Modal** — Select cash or card payment method
+8. **Print Modal** — Preview and print bill before sending to kitchen
 
 ## API Endpoints
 
