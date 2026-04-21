@@ -18,6 +18,7 @@ class Product(db.Model):
     category = db.Column(db.String(50), nullable=False)
     price = db.Column(db.Integer, nullable=False)  # in paisa
     is_available = db.Column(db.Boolean, default=True)
+    image = db.Column(db.String(255), nullable=True)  # emoji or icon identifier
     created_at = db.Column(db.DateTime, default=datetime.now)
 
     def to_dict(self):
@@ -26,7 +27,8 @@ class Product(db.Model):
             'name': self.name,
             'category': self.category,
             'price': self.price,
-            'is_available': self.is_available
+            'is_available': self.is_available,
+            'image': self.image
         }
 
 
@@ -87,34 +89,34 @@ def seed_products():
     if Product.query.first() is None:
         items = [
             # Beverages
-            Product(name='Masala Chai', category='Beverages', price=2000),  # Rs 20
-            Product(name='Filter Coffee', category='Beverages', price=2500),
-            Product(name='Cold Coffee', category='Beverages', price=4500),
-            Product(name='Masala Lemon Soda', category='Beverages', price=3500),
-            Product(name='Green Tea', category='Beverages', price=3000),
-            Product(name='Hot Chocolate', category='Beverages', price=5000),
-            Product(name='Iced Tea', category='Beverages', price=4000),
-            Product(name='Lassi (Sweet)', category='Beverages', price=3500),
+            Product(name='Masala Chai', category='Beverages', price=2000, image='☕'),
+            Product(name='Filter Coffee', category='Beverages', price=2500, image='🥤'),
+            Product(name='Cold Coffee', category='Beverages', price=4500, image='🧊'),
+            Product(name='Masala Lemon Soda', category='Beverages', price=3500, image='🍋'),
+            Product(name='Green Tea', category='Beverages', price=3000, image='🍵'),
+            Product(name='Hot Chocolate', category='Beverages', price=5000, image='🍫'),
+            Product(name='Iced Tea', category='Beverages', price=4000, image='🧃'),
+            Product(name='Lassi (Sweet)', category='Beverages', price=3500, image='🥛'),
             # Food
-            Product(name='Veg Sandwich', category='Food', price=6000),
-            Product(name='Grilled Cheese Sandwich', category='Food', price=7500),
-            Product(name='Poha', category='Food', price=5000),
-            Product(name='Upma', category='Food', price=5000),
-            Product(name='Idli Sambar (2 pcs)', category='Food', price=5500),
-            Product(name='Medu Vada (2 pcs)', category='Food', price=5500),
-            Product(name='Pav Bhaji', category='Food', price=7000),
-            Product(name='Misal Pav', category='Food', price=6500),
-            Product(name='Dosa (Masala)', category='Food', price=7000),
-            Product(name='Uttapam', category='Food', price=6500),
+            Product(name='Veg Sandwich', category='Food', price=6000, image='🥪'),
+            Product(name='Grilled Cheese Sandwich', category='Food', price=7500, image='🧀'),
+            Product(name='Poha', category='Food', price=5000, image='🍚'),
+            Product(name='Upma', category='Food', price=5000, image='🥘'),
+            Product(name='Idli Sambar (2 pcs)', category='Food', price=5500, image='🍛'),
+            Product(name='Medu Vada (2 pcs)', category='Food', price=5500, image='🫘'),
+            Product(name='Pav Bhaji', category='Food', price=7000, image='🍛'),
+            Product(name='Misal Pav', category='Food', price=6500, image='🌶️'),
+            Product(name='Dosa (Masala)', category='Food', price=7000, image='🥞'),
+            Product(name='Uttapam', category='Food', price=6500, image='🥞'),
             # Snacks
-            Product(name='Samosa (2 pcs)', category='Snacks', price=3000),
-            Product(name='Vada Pav', category='Snacks', price=3500),
-            Product(name='Bread Pakora', category='Snacks', price=3000),
-            Product(name='Kachori', category='Snacks', price=3000),
-            Product(name='Dhokla', category='Snacks', price=4000),
-            Product(name='Pakode (Platter)', category='Snacks', price=4500),
-            Product(name='Biscuits & Cheese', category='Snacks', price=5000),
-            Product(name='Cookie (Choco Chip)', category='Snacks', price=2500),
+            Product(name='Samosa (2 pcs)', category='Snacks', price=3000, image='🥟'),
+            Product(name='Vada Pav', category='Snacks', price=3500, image='🍞'),
+            Product(name='Bread Pakora', category='Snacks', price=3000, image='🍳'),
+            Product(name='Kachori', category='Snacks', price=3000, image='🟤'),
+            Product(name='Dhokla', category='Snacks', price=4000, image='🟡'),
+            Product(name='Pakode (Platter)', category='Snacks', price=4500, image='🫛'),
+            Product(name='Biscuits & Cheese', category='Snacks', price=5000, image='🍪'),
+            Product(name='Cookie (Choco Chip)', category='Snacks', price=2500, image='🍫'),
         ]
         db.session.add_all(items)
         db.session.commit()
@@ -153,6 +155,8 @@ def update_product(product_id):
         product.price = data['price']
     if 'category' in data:
         product.category = data['category']
+    if 'image' in data:
+        product.image = data['image']
 
     db.session.commit()
     return jsonify(product.to_dict())
@@ -166,7 +170,8 @@ def create_product():
         name=data['name'],
         category=data['category'],
         price=data['price'],
-        is_available=data.get('is_available', True)
+        is_available=data.get('is_available', True),
+        image=data.get('image')
     )
     db.session.add(product)
     db.session.commit()
