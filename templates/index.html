@@ -42,7 +42,7 @@
         .order-item-name { font-weight: 500; font-size: 0.875rem; }
         .order-item-price { color: #888; font-size: 0.8rem; }
         .order-item-qty { display: flex; align-items: center; gap: 0.5rem; }
-        .qty-btn { width: 28px; height: 28px; border: 1px solid #DDD; border-radius: 6px; background: white; cursor: pointer; font-size: 1rem; display: flex; align-items: center; justify-content: center; }
+        .qty-btn { width: 36px; height: 36px; border: 1px solid #DDD; border-radius: 6px; background: white; cursor: pointer; font-size: 1rem; display: flex; align-items: center; justify-content: center; }
         .qty-btn:hover { background: #F5F5F5; }
         .qty-value { font-weight: 600; min-width: 20px; text-align: center; }
 
@@ -59,6 +59,10 @@
         .btn-print:hover { background: #1E2526; }
         .btn-pay { background: #FF6B6B; color: white; }
         .btn-pay:hover { background: #E55A5A; }
+        .btn:disabled { opacity: 0.45; cursor: not-allowed; pointer-events: none; }
+
+        .table-field { display: flex; align-items: center; gap: 0.35rem; font-size: 0.8rem; color: #666; font-weight: 500; }
+        .table-field input { width: 3.25rem; padding: 0.35rem; border: 1px solid #DDD; border-radius: 6px; text-align: center; font-weight: 600; font-size: 0.9rem; }
 
         .orders-section { margin-top: 1rem; padding-top: 1rem; border-top: 1px solid #EEE; }
         .orders-title { font-size: 0.875rem; font-weight: 600; color: #888; margin-bottom: 0.5rem; }
@@ -172,7 +176,10 @@
 
         <div class="order-section">
             <div class="order-header">
-                <div class="order-title">Current Order</div>
+                <div>
+                    <div class="order-title">Current Order</div>
+                    <label class="table-field">Table <input type="number" id="tableNumber" value="1" min="1" max="999" inputmode="numeric"></label>
+                </div>
                 <button class="clear-btn" onclick="clearOrder()">Clear</button>
             </div>
 
@@ -195,8 +202,8 @@
                 </div>
 
                 <div class="action-btns">
-                    <button class="btn btn-print" onclick="printBill()">Print</button>
-                    <button class="btn btn-pay" onclick="payOrder()">Pay</button>
+                    <button type="button" class="btn btn-print" id="btnPrint" disabled onclick="printBill()">Print</button>
+                    <button type="button" class="btn btn-pay" id="btnPay" disabled onclick="payOrder()">Pay</button>
                 </div>
             </div>
 
@@ -208,9 +215,9 @@
     </div>
 
     <!-- Print Modal -->
-    <div class="modal-overlay" id="printModal">
+    <div class="modal-overlay" id="printModal" onclick="if(event.target===this)closePrintModal()">
         <div class="modal">
-            <div class="modal-title">Print Bill</div>
+            <div class="modal-title">Kitchen ticket</div>
             <div class="modal-body">
                 <div class="bill-preview" id="billPreview"></div>
             </div>
@@ -222,7 +229,7 @@
     </div>
 
     <!-- Payment Modal -->
-    <div class="modal-overlay" id="paymentModal">
+    <div class="modal-overlay" id="paymentModal" onclick="if(event.target===this)closePaymentModal()">
         <div class="modal">
             <div class="modal-title">Select Payment Method</div>
             <div class="modal-body">
@@ -257,7 +264,7 @@
     </div>
 
     <!-- Add Product Modal -->
-    <div class="modal-overlay" id="addProductModal">
+    <div class="modal-overlay" id="addProductModal" onclick="if(event.target===this)closeAddProductModal()">
         <div class="modal">
             <div class="modal-title">Add Menu Item</div>
             <div class="modal-body" id="addProductBody"></div>
@@ -279,6 +286,7 @@
         // Core functions - declared first for global exposure
         function addToOrder(productId) {
             const product = products.find(p => p.id === productId);
+            if (!product || !product.is_available) return;
             const existing = currentOrder.find(item => item.product_id === productId);
 
             if (existing) {
@@ -309,12 +317,11 @@
             renderMenu();
         }
 
-        async function toggleAvailability(productId) {
-            const product = products.find(p => p.id === productId);
+        async function toggleAvailability(productId, isAvailable) {
             await fetch(`/api/products/${productId}`, {
                 method: 'PATCH',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ is_available: !product.is_available })
+                body: JSON.stringify({ is_available: isAvailable })
             });
             await loadProducts();
         }
@@ -333,7 +340,7 @@
                     <input type="number" id="newPrice" placeholder="Price in Rs" style="padding:0.5rem;border:1px solid #DDD;border-radius:6px;font-size:1rem;">
                     <div style="font-size:0.875rem;color:#666;text-align:center;">Select Icon</div>
                     <div class="image-picker">
-                        ${emojiOptions.map(e => `<div class="image-option ${e === selectedImage ? 'selected' : ''}" onclick="this.parentElement.querySelectorAll('.image-option').forEach(el=>el.classList.remove('selected'));this.classList.add('selected');this.dataset.emoji='${e}';">${e}</div>`).join('')}
+                        ${emojiOptions.map(e => `<div class="image-option ${e === selectedImage ? 'selected' : ''}" data-emoji="${e}" onclick="this.parentElement.querySelectorAll('.image-option').forEach(el=>el.classList.remove('selected'));this.classList.add('selected');">${e}</div>`).join('')}
                     </div>
                 </div>
             `;
@@ -388,15 +395,17 @@
             openPaymentModal();
         }
 
-        function openPrintModal() {
+        function buildBillPreview(orderRef) {
             const subtotal = currentOrder.reduce((sum, item) => sum + (item.price * item.quantity), 0);
             const gst = Math.round(subtotal * 0.05);
             const total = subtotal + gst;
-
-            const billHtml = `
+            const refLine = orderRef
+                ? `<small>${orderRef}</small>`
+                : `<small style="color:#888">Draft — not sent to kitchen</small>`;
+            return `
                 <div class="bill-header">
                     <strong>CAFE POS</strong><br>
-                    <small>Order #ORD-${new Date().getHours()}${new Date().getMinutes()}${new Date().getSeconds()}</small>
+                    ${refLine}
                 </div>
                 <div class="bill-items">
                     ${currentOrder.map(item => `
@@ -410,12 +419,14 @@
                 <div class="bill-row-display"><span>GST (5%)</span><span>Rs ${(gst / 100).toFixed(2)}</span></div>
                 <div class="bill-row-display" style="font-weight: 700; border-top: 1px dashed #CCC; padding-top: 0.5rem; margin-top: 0.5rem;"><span>TOTAL</span><span>Rs ${(total / 100).toFixed(2)}</span></div>
             `;
-            document.getElementById('billPreview').innerHTML = billHtml;
-            // Reset modal buttons to default (Print flow)
+        }
+
+        function openPrintModal() {
+            document.getElementById('billPreview').innerHTML = buildBillPreview(null);
             const modalActions = document.querySelector('#printModal .modal-actions');
             modalActions.innerHTML = `
-                <button class="btn" style="background: #EEE;" onclick="closePrintModal()">Cancel</button>
-                <button class="btn btn-print" onclick="confirmPrint()">Print</button>
+                <button type="button" class="btn" style="background: #EEE;" onclick="closePrintModal()">Cancel</button>
+                <button type="button" class="btn btn-print" onclick="confirmPrint()">Send to kitchen</button>
             `;
             document.getElementById('printModal').classList.add('active');
         }
@@ -425,12 +436,16 @@
         }
 
         async function confirmPrint() {
-            await createOrder('pending');
-            // Change the print modal buttons for pending order
+            const submitBtn = document.querySelector('#printModal .btn-print');
+            if (submitBtn) submitBtn.disabled = true;
+            const order = await createOrder('pending');
+            if (submitBtn) submitBtn.disabled = false;
+            if (!order) return;
+            document.getElementById('billPreview').innerHTML = buildBillPreview(order.order_number);
             const modalActions = document.querySelector('#printModal .modal-actions');
             modalActions.innerHTML = `
-                <button class="btn" style="background: #EEE;" onclick="closePrintModal(); currentOrder = []; renderOrder();">Close</button>
-                <button class="btn btn-print" onclick="window.print(); closePrintModal(); currentOrder = []; renderOrder();">Print</button>
+                <button type="button" class="btn" style="background: #EEE;" onclick="closePrintModal(); currentOrder = []; renderOrder();">Close</button>
+                <button type="button" class="btn btn-print" onclick="window.print(); closePrintModal(); currentOrder = []; renderOrder();">Print receipt</button>
             `;
         }
 
@@ -461,15 +476,18 @@
                 alert('Please select a payment method');
                 return;
             }
-            await createOrder('paid');
+            const payBtn = document.querySelector('#paymentModal .btn-pay');
+            if (payBtn) payBtn.disabled = true;
+            const order = await createOrder('paid');
+            if (payBtn) payBtn.disabled = false;
+            if (!order) return;
             closePaymentModal();
-            // Show bill preview before clearing order
-            openPrintModal();
-            // Change the print modal buttons for paid order
+            document.getElementById('billPreview').innerHTML = buildBillPreview(order.order_number);
+            document.getElementById('printModal').classList.add('active');
             const modalActions = document.querySelector('#printModal .modal-actions');
             modalActions.innerHTML = `
-                <button class="btn" style="background: #EEE;" onclick="closePrintModal(); currentOrder = []; renderOrder();">Close</button>
-                <button class="btn btn-print" onclick="window.print(); closePrintModal(); currentOrder = []; renderOrder();">Print</button>
+                <button type="button" class="btn" style="background: #EEE;" onclick="closePrintModal(); currentOrder = []; renderOrder();">Close</button>
+                <button type="button" class="btn btn-print" onclick="window.print(); closePrintModal(); currentOrder = []; renderOrder();">Print receipt</button>
             `;
         }
 
@@ -533,8 +551,11 @@
         }
 
         function renderOrder() {
+            const empty = currentOrder.length === 0;
+            document.getElementById('btnPrint').disabled = empty;
+            document.getElementById('btnPay').disabled = empty;
             const container = document.getElementById('orderItems');
-            if (currentOrder.length === 0) {
+            if (empty) {
                 container.innerHTML = '<div class="order-empty">Tap menu items to add</div>';
                 document.getElementById('subtotal').textContent = 'Rs 0.00';
                 document.getElementById('gstAmount').textContent = 'Rs 0.00';
@@ -578,7 +599,7 @@
                         <div class="menu-item-toggle">
                             <span class="toggle-label ${p.is_available ? 'active' : ''}">${p.is_available ? 'ON' : 'OFF'}</span>
                             <label class="toggle-switch">
-                                <input type="checkbox" ${p.is_available ? 'checked' : ''} onchange="toggleAvailability(${p.id})">
+                                <input type="checkbox" ${p.is_available ? 'checked' : ''} onchange="toggleAvailability(${p.id}, this.checked)">
                                 <span class="toggle-slider"></span>
                             </label>
                         </div>
@@ -596,27 +617,33 @@
         }
 
         async function createOrder(status) {
+            const tEl = document.getElementById('tableNumber');
+            let tableNum = tEl ? parseInt(tEl.value, 10) : 1;
+            if (!Number.isFinite(tableNum) || tableNum < 1) tableNum = 1;
+
             const res = await fetch('/api/orders', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    table_number: 1,
+                    table_number: tableNum,
+                    status,
                     items: currentOrder.map(item => ({ product_id: item.product_id, quantity: item.quantity }))
                 })
             });
 
-            if (res.ok) {
-                const order = await res.json();
-                if (status === 'paid') {
-                    await fetch(`/api/orders/${order.id}`, {
-                        method: 'PATCH',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ status: 'paid' })
-                    });
-                }
-                loadStats();
-                loadRecentOrders();
+            if (!res.ok) {
+                let msg = 'Could not save order';
+                try {
+                    const err = await res.json();
+                    if (err.error) msg = err.error;
+                } catch (e) { /* ignore */ }
+                alert(msg);
+                return null;
             }
+            const order = await res.json();
+            loadStats();
+            loadRecentOrders();
+            return order;
         }
 
         loadProducts();
