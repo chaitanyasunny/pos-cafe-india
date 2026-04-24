@@ -1,7 +1,8 @@
 import os
+import secrets
 from flask import Flask, render_template, request, jsonify
 from flask_sqlalchemy import SQLAlchemy
-from datetime import datetime, date
+from datetime import datetime
 import pytz
 
 app = Flask(__name__)
@@ -181,13 +182,21 @@ def create_product():
 @app.route('/api/orders', methods=['GET', 'POST'])
 def orders():
     if request.method == 'POST':
-        data = request.json
-        order_num = f"ORD-{datetime.now().strftime('%H%M%S')}"
+        data = request.json or {}
+        items = data.get('items') or []
+        if not items:
+            return jsonify({'error': 'Order must include at least one line item'}), 400
+
+        status = data.get('status') or 'pending'
+        if status not in ('pending', 'prepared', 'paid'):
+            status = 'pending'
+
+        order_num = f"ORD-{datetime.now().strftime('%H%M%S')}-{secrets.randbelow(900) + 100}"
 
         order = Order(
             order_number=order_num,
             table_number=data.get('table_number'),
-            status='pending',
+            status=status,
             total=0,
             created_at=get_ist_now()
         )
@@ -195,7 +204,7 @@ def orders():
         db.session.flush()
 
         total = 0
-        for item in data.get('items', []):
+        for item in items:
             product = Product.query.get(item['product_id'])
             if product:
                 order_item = OrderItem(
@@ -206,6 +215,10 @@ def orders():
                 )
                 db.session.add(order_item)
                 total += product.price * item.get('quantity', 1)
+
+        if total == 0:
+            db.session.rollback()
+            return jsonify({'error': 'No valid products in order'}), 400
 
         order.total = total
         db.session.commit()
@@ -231,6 +244,7 @@ def update_order(order_id):
     order = Order.query.get_or_404(order_id)
 
     if request.method == 'DELETE':
+        OrderItem.query.filter_by(order_id=order.id).delete(synchronize_session=False)
         db.session.delete(order)
         db.session.commit()
         return jsonify({'success': True})
