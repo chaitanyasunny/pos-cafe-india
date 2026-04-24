@@ -336,6 +336,7 @@
                         <option value="Beverages">Beverages</option>
                         <option value="Food">Food</option>
                         <option value="Snacks">Snacks</option>
+                        <option value="Desserts">Desserts</option>
                     </select>
                     <input type="number" id="newPrice" placeholder="Price in Rs" style="padding:0.5rem;border:1px solid #DDD;border-radius:6px;font-size:1rem;">
                     <div style="font-size:0.875rem;color:#666;text-align:center;">Select Icon</div>
@@ -543,7 +544,7 @@
         }
 
         function renderCategories() {
-            const categories = ['All', ...new Set(products.map(p => p.category))];
+            const categories = ['All', ...[...new Set(products.map(p => p.category))].sort((a, b) => a.localeCompare(b))];
             const tabs = document.getElementById('categoryTabs');
             tabs.innerHTML = categories.map(c => `
                 <button class="category-tab ${c === currentCategory ? 'active' : ''}" onclick="setCategory('${c}')">${c}</button>
