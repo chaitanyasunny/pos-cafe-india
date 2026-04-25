@@ -1,5 +1,6 @@
 import os
 import secrets
+from collections import defaultdict
 from flask import Flask, render_template, request, jsonify
 from flask_sqlalchemy import SQLAlchemy
 from datetime import datetime
@@ -149,6 +150,26 @@ def ensure_desserts_category():
     db.session.commit()
 
 
+def merge_duplicate_products():
+    """For identical (category, name), keep the lowest id; re-point order lines and remove extras."""
+    groups = defaultdict(list)
+    for p in Product.query.order_by(Product.id).all():
+        key = (p.category.strip().lower(), p.name.strip().lower())
+        groups[key].append(p)
+    changed = False
+    for plist in groups.values():
+        if len(plist) <= 1:
+            continue
+        keeper = plist[0]
+        for dup in plist[1:]:
+            for oi in OrderItem.query.filter_by(product_id=dup.id).all():
+                oi.product_id = keeper.id
+            db.session.delete(dup)
+            changed = True
+    if changed:
+        db.session.commit()
+
+
 @app.before_request
 def before_first():
     if not hasattr(app, '_seeded'):
@@ -156,6 +177,7 @@ def before_first():
             db.create_all()
             seed_products()
             ensure_desserts_category()
+            merge_duplicate_products()
         app._seeded = True
 
 

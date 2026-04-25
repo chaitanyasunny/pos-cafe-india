@@ -19,6 +19,11 @@
         .menu-section { overflow-y: auto; }
         .order-section { background: white; border-radius: 12px; padding: 1rem; display: flex; flex-direction: column; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
 
+        .menu-toolbar { margin-bottom: 0.65rem; }
+        .menu-search { width: 100%; max-width: min(100%, 320px); padding: 0.45rem 0.7rem; border: 1px solid #E0E0E0; border-radius: 8px; font-size: 0.875rem; background: #fff; color: #2D3436; }
+        .menu-search::placeholder { color: #999; }
+        .menu-search:focus { outline: none; border-color: #FF6B6B; box-shadow: 0 0 0 2px rgba(255,107,107,0.15); }
+
         .category-tabs { display: flex; gap: 0.5rem; margin-bottom: 1rem; flex-wrap: wrap; }
         .category-tab { padding: 0.5rem 1rem; border: none; border-radius: 20px; cursor: pointer; font-size: 0.875rem; font-weight: 500; background: #E0E0E0; color: #2D3436; transition: all 0.15s; }
         .category-tab.active { background: #FF6B6B; color: white; }
@@ -170,6 +175,9 @@
 
     <div class="main">
         <div class="menu-section">
+            <div class="menu-toolbar">
+                <input type="search" class="menu-search" id="menuSearch" placeholder="Search menu…" autocomplete="off" aria-label="Search menu" oninput="onMenuSearchInput(this.value)">
+            </div>
             <div class="category-tabs" id="categoryTabs"></div>
             <div class="menu-grid" id="menuGrid"></div>
         </div>
@@ -193,7 +201,7 @@
                     <span id="subtotal">Rs 0.00</span>
                 </div>
                 <div class="bill-row gst">
-                    <span>GST (5%)</span>
+                    <span id="gstLabel">GST (18%)</span>
                     <span id="gstAmount">Rs 0.00</span>
                 </div>
                 <div class="bill-row total">
@@ -282,6 +290,30 @@
         let currentCategory = 'All';
         let selectedPaymentMethod = null;
         let manageMode = false;
+        let menuSearch = '';
+        const GST_RATE = 0.18;
+        function orderGstPaisa(subtotalPaisa) {
+            return Math.round(subtotalPaisa * GST_RATE);
+        }
+
+        function onMenuSearchInput(value) {
+            menuSearch = value;
+            renderMenu();
+        }
+
+        function menuProductsFiltered() {
+            let list = currentCategory === 'All'
+                ? products
+                : products.filter(p => p.category === currentCategory);
+            const q = menuSearch.trim().toLowerCase();
+            if (q) {
+                list = list.filter(p =>
+                    p.name.toLowerCase().includes(q) ||
+                    p.category.toLowerCase().includes(q)
+                );
+            }
+            return list;
+        }
 
         // Core functions - declared first for global exposure
         function addToOrder(productId) {
@@ -398,7 +430,7 @@
 
         function buildBillPreview(orderRef) {
             const subtotal = currentOrder.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-            const gst = Math.round(subtotal * 0.05);
+            const gst = orderGstPaisa(subtotal);
             const total = subtotal + gst;
             const refLine = orderRef
                 ? `<small>${orderRef}</small>`
@@ -417,7 +449,7 @@
                     `).join('')}
                 </div>
                 <div class="bill-row-display" style="margin-top: 0.5rem;"><span>Subtotal</span><span>Rs ${(subtotal / 100).toFixed(2)}</span></div>
-                <div class="bill-row-display"><span>GST (5%)</span><span>Rs ${(gst / 100).toFixed(2)}</span></div>
+                <div class="bill-row-display"><span>GST (18%)</span><span>Rs ${(gst / 100).toFixed(2)}</span></div>
                 <div class="bill-row-display" style="font-weight: 700; border-top: 1px dashed #CCC; padding-top: 0.5rem; margin-top: 0.5rem;"><span>TOTAL</span><span>Rs ${(total / 100).toFixed(2)}</span></div>
             `;
         }
@@ -452,7 +484,7 @@
 
         function openPaymentModal() {
             const subtotal = currentOrder.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-            const gst = Math.round(subtotal * 0.05);
+            const gst = orderGstPaisa(subtotal);
             const total = subtotal + gst;
             document.getElementById('payTotalAmount').textContent = 'Rs ' + (total / 100).toFixed(2);
             selectedPaymentMethod = null;
@@ -579,7 +611,7 @@
             `).join('');
 
             const subtotal = currentOrder.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-            const gst = Math.round(subtotal * 0.05);
+            const gst = orderGstPaisa(subtotal);
             const total = subtotal + gst;
             document.getElementById('subtotal').textContent = 'Rs ' + (subtotal / 100).toFixed(2);
             document.getElementById('gstAmount').textContent = 'Rs ' + (gst / 100).toFixed(2);
@@ -587,8 +619,16 @@
         }
 
         function renderMenu() {
-            const filtered = currentCategory === 'All' ? products : products.filter(p => p.category === currentCategory);
+            const filtered = menuProductsFiltered();
             const grid = document.getElementById('menuGrid');
+            if (filtered.length === 0) {
+                let emptyMsg = 'No items to show';
+                if (menuSearch.trim()) emptyMsg = 'No items match your search';
+                else if (products.length === 0) emptyMsg = 'No menu items';
+                else emptyMsg = 'No items in this category';
+                grid.innerHTML = `<div class="menu-no-results" style="grid-column:1/-1;text-align:center;color:#999;padding:1.5rem 0.5rem;font-size:0.9rem;">${emptyMsg}</div>`;
+                return;
+            }
             if (manageMode) {
                 grid.innerHTML = filtered.map(p => `
                     <div class="menu-item menu-item-manage">

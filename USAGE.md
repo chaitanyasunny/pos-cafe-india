@@ -24,7 +24,8 @@ The server starts at **http://127.0.0.1:5555**
 ## Using the POS
 
 ### Menu Panel (left side)
-- Items are grouped by category: Beverages, Food, Snacks
+- **Search** — Use the field above the category tabs to filter by item or category name (works together with the selected tab: pick a category, then search within it)
+- Items are grouped by category (e.g. Beverages, Food, Snacks, Desserts)
 - Click category tabs to filter
 - Click any item to add it to the current order
 
@@ -35,7 +36,7 @@ The server starts at **http://127.0.0.1:5555**
 - **Clear** removes all items from the order
 
 ### Kitchen ticket & payment
-- Subtotal, GST (5%), and total are shown automatically (GST is for display/receipt; stored `order.total` in the database is the sum of line items before GST)
+- Subtotal, GST (18%), and total are shown automatically (GST is for display/receipt; stored `order.total` in the database is the sum of line items before GST)
 - **Print** — Opens the **Kitchen ticket** modal. The preview is a **draft** until you click **Send to kitchen**, which creates a `pending` order and shows the real **order number** from the server
 - **Pay** — Choose Cash, Card/UPI, or QR, then **Confirm**. Creates a `paid` order in one request and opens the same ticket modal for an optional **Print receipt**
 - Click outside a modal (dark backdrop) to close it, same as **Cancel**
