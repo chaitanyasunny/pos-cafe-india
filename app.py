@@ -85,6 +85,23 @@ def get_ist_now():
     return datetime.now(IST)
 
 
+# (name, price_paisa, emoji) — single source for seed + DB upgrades
+_DESSERT_SEED = (
+    ('Gulab Jamun (2 pcs)', 4500, '🟤'),
+    ('Ras Malai', 5500, '🥛'),
+    ('Kheer (Cup)', 5000, '🍚'),
+    ('Jalebi (Portion)', 4000, '🌀'),
+    ('Ice Cream (2 Scoops)', 5000, '🍨'),
+    ('Brownie with Ice Cream', 6500, '🍫'),
+    ('Cheesecake Slice', 7000, '🍰'),
+    ('Fruit Custard', 4500, '🍮'),
+)
+
+
+def default_dessert_products():
+    return [Product(name=n, category='Desserts', price=p, image=i) for n, p, i in _DESSERT_SEED]
+
+
 def seed_products():
     """Seed default menu items if database is empty."""
     if Product.query.first() is None:
@@ -118,9 +135,18 @@ def seed_products():
             Product(name='Pakode (Platter)', category='Snacks', price=4500, image='🫛'),
             Product(name='Biscuits & Cheese', category='Snacks', price=5000, image='🍪'),
             Product(name='Cookie (Choco Chip)', category='Snacks', price=2500, image='🍫'),
+            *default_dessert_products(),
         ]
         db.session.add_all(items)
         db.session.commit()
+
+
+def ensure_desserts_category():
+    """Add default desserts if the DB was seeded before that category existed."""
+    if Product.query.filter_by(category='Desserts').first() is not None:
+        return
+    db.session.add_all(default_dessert_products())
+    db.session.commit()
 
 
 @app.before_request
@@ -129,6 +155,7 @@ def before_first():
         with app.app_context():
             db.create_all()
             seed_products()
+            ensure_desserts_category()
         app._seeded = True
 
 
