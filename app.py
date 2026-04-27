@@ -186,6 +186,11 @@ def index():
     return render_template('index.html')
 
 
+@app.route('/kds')
+def kds():
+    return render_template('kds.html')
+
+
 @app.route('/api/products', methods=['GET'])
 def get_products():
     products = Product.query.all()
@@ -275,6 +280,7 @@ def orders():
 
     # GET
     date_str = request.args.get('date')
+    status_filter = request.args.get('status')
     query = Order.query
 
     if date_str:
@@ -283,6 +289,10 @@ def orders():
             query = query.filter(db.func.date(Order.created_at) == filter_date)
         except ValueError:
             pass
+
+    if status_filter:
+        statuses = [s.strip() for s in status_filter.split(',')]
+        query = query.filter(Order.status.in_(statuses))
 
     orders = query.order_by(Order.created_at.desc()).limit(50).all()
     return jsonify([o.to_dict() for o in orders])
