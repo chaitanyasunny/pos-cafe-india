@@ -24,6 +24,12 @@
         .menu-search::placeholder { color: #999; }
         .menu-search:focus { outline: none; border-color: #FF6B6B; box-shadow: 0 0 0 2px rgba(255,107,107,0.15); }
 
+        .search-wrapper { position: relative; display: flex; align-items: center; margin-bottom: 0.65rem; }
+        .search-icon { position: absolute; left: 10px; font-size: 0.9rem; color: #999; }
+        .menu-search { width: 100%; padding: 0.6rem 2rem 0.6rem 2rem; border-radius: 10px; border: 1px solid #DDD; font-size: 0.95rem; }
+        .menu-search:focus { border-color: #FF6B6B; box-shadow: 0 0 0 2px rgba(255,107,107,0.2); }
+        .clear-search { position: absolute; right: 8px; border: none; background: none; cursor: pointer; font-size: 0.9rem; color: #999; }
+
         .category-tabs { display: flex; gap: 0.5rem; margin-bottom: 1rem; flex-wrap: wrap; }
         .category-tab { padding: 0.5rem 1rem; border: none; border-radius: 20px; cursor: pointer; font-size: 0.875rem; font-weight: 500; background: #E0E0E0; color: #2D3436; transition: all 0.15s; }
         .category-tab.active { background: #FF6B6B; color: white; }
@@ -178,8 +184,17 @@
 
     <div class="main">
         <div class="menu-section">
-            <div class="menu-toolbar">
-                <input type="search" class="menu-search" id="menuSearch" placeholder="Search menu…" autocomplete="off" aria-label="Search menu" oninput="onMenuSearchInput(this.value)">
+            <div class="search-wrapper">
+                <span class="search-icon">🔍</span>
+                <input 
+                    type="search" 
+                    class="menu-search" 
+                    id="menuSearch"
+                    placeholder="Search coffee, tea..."
+                    autocomplete="off"
+                    oninput="onMenuSearchInput(this.value)"
+                >
+                <button class="clear-search" onclick="clearSearch()">✕</button>
             </div>
             <div class="category-tabs" id="categoryTabs"></div>
             <div class="menu-grid" id="menuGrid"></div>
