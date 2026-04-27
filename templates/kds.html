@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kitchen Display - Cafe POS</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #F5F5F5; color: #2D3436; }
+
+        .header { background: #2D3436; color: white; padding: 1rem 2rem; display: flex; justify-content: space-between; align-items: center; }
+        .header h1 { font-size: 1.5rem; font-weight: 600; }
+        .header-controls { display: flex; align-items: center; gap: 1rem; }
+        .current-time { font-size: 0.875rem; opacity: 0.8; }
+        .back-link { color: white; text-decoration: none; font-size: 0.875rem; opacity: 0.8; }
+        .back-link:hover { opacity: 1; }
+
+        .filters { padding: 1rem 2rem; background: white; border-bottom: 1px solid #E0E0E0; display: flex; gap: 0.5rem; align-items: center; }
+        .filter-btn { padding: 0.5rem 1rem; border: 1px solid #E0E0E0; border-radius: 6px; background: white; cursor: pointer; font-size: 0.875rem; }
+        .filter-btn.active { background: #FF6B6B; color: white; border-color: #FF6B6B; }
+        .filter-btn:hover:not(.active) { background: #F5F5F5; }
+        .filter-hints { margin-left: auto; font-size: 0.75rem; color: #888; }
+        .filter-hints span { margin-left: 0.5rem; }
+
+        .kds-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 1rem; padding: 1rem 2rem; }
+        .order-card { background: white; border-radius: 8px; padding: 1rem; box-shadow: 0 2px 8px rgba(0,0,0,0.08); cursor: pointer; transition: all 0.15s; }
+        .order-card:hover { transform: translateY(-2px); box-shadow: 0 4px 16px rgba(0,0,0,0.12); }
+        .order-card.status-pending { border-top: 4px solid #FFEAA7; }
+        .order-card.status-prepared { border-top: 4px solid #74B9FF; }
+        .order-card.aged { border: 2px solid #FF6B6B; }
+
+        .order-card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem; }
+        .order-number { font-weight: 700; font-size: 1rem; }
+        .table-number { background: #2D3436; color: white; padding: 0.25rem 0.5rem; border-radius: 4px; font-size: 0.75rem; font-weight: 600; }
+        .order-status { padding: 0.25rem 0.5rem; border-radius: 4px; font-size: 0.7rem; font-weight: 700; text-transform: uppercase; }
+        .status-pending { background: #FFEAA7; color: #8B6914; }
+        .status-prepared { background: #74B9FF; color: #1E4D8C; }
+
+        .order-items { margin-bottom: 0.75rem; }
+        .order-item { display: flex; justify-content: space-between; padding: 0.35rem 0; border-bottom: 1px solid #F0F0F0; font-size: 0.875rem; }
+        .order-item:last-child { border-bottom: none; }
+        .item-qty { font-weight: 700; margin-right: 0.5rem; }
+
+        .order-footer { display: flex; justify-content: space-between; align-items: center; font-size: 0.75rem; color: #888; }
+        .order-age { font-weight: 600; }
+        .order-age.urgent { color: #FF6B6B; }
+
+        .no-orders { text-align: center; padding: 3rem; color: #AAA; font-size: 1rem; }
+        .last-refresh { font-size: 0.75rem; color: #888; padding: 0.5rem 2rem; text-align: right; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>Kitchen Display</h1>
+        <div class="header-controls">
+            <span class="current-time" id="currentTime"></span>
+            <a href="/" class="back-link">← POS</a>
+        </div>
+    </div>
+
+    <div class="filters">
+        <button class="filter-btn active" data-filter="all">All</button>
+        <button class="filter-btn" data-filter="pending">Pending</button>
+        <button class="filter-btn" data-filter="prepared">Prepared</button>
+        <div class="filter-hints">
+            <span>[1] All</span>
+            <span>[2] Pending</span>
+            <span>[3] Prepared</span>
+            <span>[R] Refresh</span>
+        </div>
+    </div>
+
+    <div class="kds-grid" id="ordersGrid"></div>
+    <div class="last-refresh" id="lastRefresh"></div>
+
+    <script>
+        let orders = [];
+        let currentFilter = 'all';
+        const AGED_THRESHOLD_MINUTES = 10;
+        let previousPendingIds = new Set();
+        let audioContext = null;
+
+        function formatTime(date) {
+            return date.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true });
+        }
+
+        function updateClock() {
+            document.getElementById('currentTime').textContent = formatTime(new Date());
+        }
+
+        function getAgeString(isoString) {
+            const created = new Date(isoString);
+            const now = new Date();
+            const diffMs = now - created;
+            const diffMins = Math.floor(diffMs / 60000);
+            if (diffMins < 1) return 'Just now';
+            if (diffMins < 60) return `${diffMins}m ago`;
+            const hours = Math.floor(diffMins / 60);
+            const mins = diffMins % 60;
+            return `${hours}h ${mins}m ago`;
+        }
+
+        function isAged(isoString) {
+            const created = new Date(isoString);
+            const now = new Date();
+            const diffMins = Math.floor((now - created) / 60000);
+            return diffMins >= AGED_THRESHOLD_MINUTES;
+        }
+
+        function playAlert() {
+            if (!audioContext) {
+                audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            }
+            const oscillator = audioContext.createOscillator();
+            const gainNode = audioContext.createGain();
+            oscillator.connect(gainNode);
+            gainNode.connect(audioContext.destination);
+            oscillator.frequency.value = 880;
+            oscillator.type = 'sine';
+            gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+            gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.5);
+            oscillator.start(audioContext.currentTime);
+            oscillator.stop(audioContext.currentTime + 0.5);
+        }
+
+        function renderOrders() {
+            const grid = document.getElementById('ordersGrid');
+            let filtered = orders;
+            if (currentFilter !== 'all') {
+                filtered = orders.filter(o => o.status === currentFilter);
+            }
+
+            if (filtered.length === 0) {
+                grid.innerHTML = '<div class="no-orders">No orders to display</div>';
+            } else {
+                grid.innerHTML = filtered.map(o => {
+                    const aged = isAged(o.created_at);
+                    return `
+                        <div class="order-card status-${o.status} ${aged ? 'aged' : ''}" onclick="toggleOrderStatus(${o.id})">
+                            <div class="order-card-header">
+                                <div>
+                                    <div class="order-number">${o.order_number}</div>
+                                    <div class="table-number">Table ${o.table_number || '-'}</div>
+                                </div>
+                                <span class="order-status status-${o.status}">${o.status}</span>
+                            </div>
+                            <div class="order-items">
+                                ${o.items.map(item => `
+                                    <div class="order-item">
+                                        <span><span class="item-qty">${item.quantity}x</span>${item.product_name}</span>
+                                    </div>
+                                `).join('')}
+                            </div>
+                            <div class="order-footer">
+                                <span class="order-age ${aged ? 'urgent' : ''}">${getAgeString(o.created_at)}</span>
+                                <span>Click to ${o.status === 'pending' ? 'mark ready' : 'mark pending'}</span>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+            }
+            document.getElementById('lastRefresh').textContent = 'Updated: ' + formatTime(new Date());
+        }
+
+        async function loadOrders() {
+            try {
+                const res = await fetch('/api/orders?status=pending,prepared');
+                orders = await res.json();
+
+                const currentPendingIds = new Set(orders.filter(o => o.status === 'pending').map(o => o.id));
+                const newPending = [...currentPendingIds].filter(id => !previousPendingIds.has(id));
+                if (newPending.length > 0) {
+                    playAlert();
+                }
+                previousPendingIds = currentPendingIds;
+
+                renderOrders();
+            } catch (e) {
+                console.error('Failed to load orders:', e);
+            }
+        }
+
+        async function toggleOrderStatus(orderId) {
+            const order = orders.find(o => o.id === orderId);
+            if (!order) return;
+            const newStatus = order.status === 'pending' ? 'prepared' : 'pending';
+            try {
+                await fetch(`/api/orders/${orderId}`, {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ status: newStatus })
+                });
+                await loadOrders();
+            } catch (e) {
+                console.error('Failed to update order:', e);
+            }
+        }
+
+        document.querySelectorAll('.filter-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                currentFilter = btn.dataset.filter;
+                renderOrders();
+            });
+        });
+
+        document.addEventListener('keydown', (e) => {
+            if (e.key === '1') {
+                currentFilter = 'all';
+                document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+                document.querySelector('[data-filter="all"]').classList.add('active');
+                renderOrders();
+            } else if (e.key === '2') {
+                currentFilter = 'pending';
+                document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+                document.querySelector('[data-filter="pending"]').classList.add('active');
+                renderOrders();
+            } else if (e.key === '3') {
+                currentFilter = 'prepared';
+                document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+                document.querySelector('[data-filter="prepared"]').classList.add('active');
+                renderOrders();
+            } else if (e.key === 'r' || e.key === 'R') {
+                loadOrders();
+            }
+        });
+
+        updateClock();
+        setInterval(updateClock, 1000);
+        loadOrders();
+        setInterval(loadOrders, 10000);
+    </script>
+</body>
+</html>
