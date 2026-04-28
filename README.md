@@ -20,18 +20,19 @@ Flask + PostgreSQL backend, vanilla HTML/CSS/JS frontend. No dependencies, no bu
 
 ### Workflows
 
-- **Send to Kitchen** — saves order as `pending`, opens kitchen ticket modal
-- **Pay** — single-step create with `status: paid`, opens receipt modal
+- **Send to Kitchen** — saves order as `pending`, opens kitchen ticket modal with enhanced bill preview
+- **Pay** — single-step create with `status: paid`, choose Cash/Card/UPI/QR, opens receipt modal
 - **Print Receipt** — dedicated receipt layout (not full page), thermal size selector (58mm / 80mm)
 
 ### Admin
 
 - Lock/unlock password gate blocks Add Item, Manage Menu, and availability toggles
 - Add Item modal with emoji picker for icon selection
+- Cashier name captured on payment for receipt tracking
 
 ### Receipt
 
-Receipts include: cafe name, address, GSTIN, phone, order number, items, payment method, cashier name
+Receipts include: cafe name, address, GSTIN, phone, order number, items, payment method, cashier name, timestamp
 
 ---
 
