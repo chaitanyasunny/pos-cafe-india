@@ -199,7 +199,10 @@ def get_products():
 
 @app.route('/api/products/<int:product_id>', methods=['PATCH'])
 def update_product(product_id):
-    product = Product.query.get_or_404(product_id)
+    product = db.session.get(Product, product_id)
+    if product is None:
+        from flask import abort
+        abort(404)
     data = request.json
 
     if 'is_available' in data:
@@ -220,6 +223,10 @@ def update_product(product_id):
 @app.route('/api/products', methods=['POST'])
 def create_product():
     data = request.json
+
+    # Validate required fields
+    if not data or not data.get('name') or not data.get('category') or 'price' not in data:
+        return jsonify({'error': 'Missing required fields: name, category, price'}), 400
 
     product = Product(
         name=data['name'],
@@ -259,7 +266,7 @@ def orders():
 
         total = 0
         for item in items:
-            product = Product.query.get(item['product_id'])
+            product = db.session.get(Product, item['product_id'])
             if product:
                 order_item = OrderItem(
                     order_id=order.id,
@@ -300,7 +307,10 @@ def orders():
 
 @app.route('/api/orders/<int:order_id>', methods=['PATCH', 'DELETE'])
 def update_order(order_id):
-    order = Order.query.get_or_404(order_id)
+    order = db.session.get(Order, order_id)
+    if order is None:
+        from flask import abort
+        abort(404)
 
     if request.method == 'DELETE':
         OrderItem.query.filter_by(order_id=order.id).delete(synchronize_session=False)

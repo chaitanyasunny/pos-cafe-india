@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>POS Visual Companion</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #F5F6F8; color: #1A1F2E; padding: 2rem; line-height: 1.5; }
+        .container { max-width: 1200px; margin: 0 auto; }
+        h1 { font-size: 1.75rem; margin-bottom: 0.5rem; color: #2D3436; }
+        h2 { font-size: 1.25rem; margin: 1.5rem 0 0.75rem; color: #3A4A5A; }
+        .subtitle { color: #6B7A8F; margin-bottom: 2rem; }
+
+        .card { background: white; border-radius: 12px; padding: 1.5rem; margin-bottom: 1.5rem; box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
+        .card h3 { margin-bottom: 1rem; color: #2D3436; font-size: 1.1rem; }
+
+        .architecture-diagram { background: #FAFBFC; border: 1px solid #E8EDF4; border-radius: 8px; padding: 1.5rem; margin: 1rem 0; }
+        .box { background: white; border: 2px solid #4A90D9; border-radius: 8px; padding: 0.75rem 1rem; text-align: center; font-weight: 600; display: inline-block; margin: 0.5rem; }
+        .box.flask { background: #E8F4FD; border-color: #4A90D9; }
+        .box.db { background: #EDF8F0; border-color: #27AE60; }
+        .box.frontend { background: #FFF4E8; border-color: #E67E22; }
+        .box.api { background: #F4E8FD; border-color: #9B59D9; }
+        .arrow { color: #95A5A6; margin: 0 0.5rem; }
+        .flow-row { display: flex; align-items: center; justify-content: center; flex-wrap: wrap; margin: 0.5rem 0; }
+
+        .feature-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin: 1rem 0; }
+        .feature { background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 8px; padding: 1rem; }
+        .feature-icon { font-size: 1.5rem; margin-bottom: 0.5rem; }
+        .feature-name { font-weight: 600; color: #2D3748; }
+        .feature-status { font-size: 0.75rem; padding: 0.2rem 0.5rem; border-radius: 999px; display: inline-block; margin-top: 0.5rem; }
+        .status-complete { background: #C6F6D5; color: #276749; }
+        .status-needs-test { background: #FEEBC8; color: #C05621; }
+
+        .test-matrix { width: 100%; border-collapse: collapse; margin: 1rem 0; }
+        .test-matrix th, .test-matrix td { padding: 0.75rem; text-align: left; border: 1px solid #E2E8F0; }
+        .test-matrix th { background: #F7FAFC; font-weight: 600; }
+        .test-matrix tr:hover { background: #F8FAFC; }
+        .check { color: #27AE60; }
+        .cross { color: #E74C3C; }
+        .warn { color: #F39C12; }
+
+        .agent-flow { display: flex; flex-direction: column; gap: 0.5rem; margin: 1rem 0; }
+        .agent-box { background: linear-gradient(135deg, #667EEA 0%, #764BA2 100%); color: white; padding: 1rem; border-radius: 8px; text-align: center; font-weight: 600; }
+        .agent-box.secondary { background: linear-gradient(135deg, #F093FB 0%, #F5576C 100%); }
+        .agent-box.tertiary { background: linear-gradient(135deg, #4FD1C5 0%, #3C9DAB 100%); }
+
+        .nav-tabs { display: flex; gap: 0.5rem; margin-bottom: 1.5rem; border-bottom: 2px solid #E2E8F0; padding-bottom: 0; }
+        .nav-tab { padding: 0.75rem 1.25rem; border: none; background: transparent; cursor: pointer; font-weight: 600; color: #6B7A8F; border-bottom: 2px solid transparent; margin-bottom: -2px; }
+        .nav-tab.active { color: #4A90D9; border-bottom-color: #4A90D9; }
+        .nav-tab:hover { color: #2D3436; }
+
+        .section { display: none; }
+        .section.active { display: block; }
+
+        .progress-bar { background: #E2E8F0; border-radius: 999px; height: 8px; overflow: hidden; margin: 0.5rem 0; }
+        .progress-fill { background: linear-gradient(90deg, #4A90D9, #67B868); height: 100%; border-radius: 999px; transition: width 0.3s; }
+
+        .legend { display: flex; gap: 1rem; font-size: 0.85rem; color: #6B7A8F; margin: 0.5rem 0; }
+        .legend-item { display: flex; align-items: center; gap: 0.35rem; }
+        .dot { width: 10px; height: 10px; border-radius: 50%; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Cafe POS — Visual Companion</h1>
+        <p class="subtitle">Architecture, Features, Test Coverage & Multi-Agent Plan</p>
+
+        <div class="nav-tabs">
+            <button class="nav-tab active" onclick="showSection('architecture')">Architecture</button>
+            <button class="nav-tab" onclick="showSection('features')">Features</button>
+            <button class="nav-tab" onclick="showSection('test-matrix')">Test Matrix</button>
+            <button class="nav-tab" onclick="showSection('agent-plan')">Multi-Agent Plan</button>
+        </div>
+
+        <!-- Architecture Section -->
+        <div id="architecture" class="section active">
+            <div class="card">
+                <h3>System Architecture</h3>
+                <div class="architecture-diagram">
+                    <div class="flow-row">
+                        <div class="box frontend">Frontend (HTML/CSS/JS)</div>
+                        <span class="arrow">→</span>
+                        <div class="box api">Flask API (app.py)</div>
+                        <span class="arrow">→</span>
+                        <div class="box db">PostgreSQL</div>
+                    </div>
+                    <div class="flow-row" style="font-size: 0.85rem; color: #6B7A8F;">
+                        <span style="width: 180px; text-align: center;">Menu, Orders, Stats</span>
+                        <span></span>
+                        <span style="width: 150px; text-align: center;">REST + SQLAlchemy</span>
+                    </div>
+                </div>
+                <p style="font-size: 0.9rem; color: #6B7A8F; margin-top: 1rem;">
+                    <strong>Stack:</strong> Flask + SQLAlchemy (backend) | Vanilla JS (frontend) | PostgreSQL 16 (database)<br>
+                    <strong>Data:</strong> All prices stored in paisa (1 INR = 100 paisa) | IST timezone
+                </p>
+            </div>
+
+            <div class="card">
+                <h3>API Endpoints</h3>
+                <table class="test-matrix">
+                    <tr><th>Method</th><th>Endpoint</th><th>Purpose</th><th>Status</th></tr>
+                    <tr><td>GET</td><td>/api/products</td><td>List menu items</td><td><span class="check">✓</span> Working</td></tr>
+                    <tr><td>POST</td><td>/api/products</td><td>Create product</td><td><span class="check">✓</span> Working</td></tr>
+                    <tr><td>PATCH</td><td>/api/products/:id</td><td>Update product</td><td><span class="check">✓</span> Working</td></tr>
+                    <tr><td>GET</td><td>/api/orders</td><td>List recent orders</td><td><span class="check">✓</span> Working</td></tr>
+                    <tr><td>POST</td><td>/api/orders</td><td>Create order</td><td><span class="check">✓</span> Working</td></tr>
+                    <tr><td>PATCH</td><td>/api/orders/:id</td><td>Update status</td><td><span class="check">✓</span> Working</td></tr>
+                    <tr><td>DELETE</td><td>/api/orders/:id</td><td>Cancel order</td><td><span class="check">✓</span> Working</td></tr>
+                    <tr><td>GET</td><td>/api/stats</td><td>Today's statistics</td><td><span class="check">✓</span> Working</td></tr>
+                </table>
+            </div>
+        </div>
+
+        <!-- Features Section -->
+        <div id="features" class="section">
+            <div class="card">
+                <h3>Feature Inventory</h3>
+                <div class="feature-grid">
+                    <div class="feature">
+                        <div class="feature-icon">☕</div>
+                        <div class="feature-name">Menu Grid</div>
+                        <div class="feature-status status-complete">Complete</div>
+                    </div>
+                    <div class="feature">
+                        <div class="feature-icon">🔍</div>
+                        <div class="feature-name">Search</div>
+                        <div class="feature-status status-complete">Complete</div>
+                    </div>
+                    <div class="feature">
+                        <div class="feature-icon">📋</div>
+                        <div class="feature-name">Order Panel</div>
+                        <div class="feature-status status-complete">Complete</div>
+                    </div>
+                    <div class="feature">
+                        <div class="feature-icon">🖨️</div>
+                        <div class="feature-name">Print/Kitchen</div>
+                        <div class="feature-status status-complete">Complete</div>
+                    </div>
+                    <div class="feature">
+                        <div class="feature-icon">💳</div>
+                        <div class="feature-name">Payment</div>
+                        <div class="feature-status status-complete">Complete</div>
+                    </div>
+                    <div class="feature">
+                        <div class="feature-icon">📊</div>
+                        <div class="feature-name">Stats Header</div>
+                        <div class="feature-status status-complete">Complete</div>
+                    </div>
+                    <div class="feature">
+                        <div class="feature-icon">🔒</div>
+                        <div class="feature-name">Admin Lock</div>
+                        <div class="feature-status status-complete">Complete</div>
+                    </div>
+                    <div class="feature">
+                        <div class="feature-icon">👨‍🍳</div>
+                        <div class="feature-name">KDS Display</div>
+                        <div class="feature-status status-complete">Complete</div>
+                    </div>
+                    <div class="feature">
+                        <div class="feature-icon">🧾</div>
+                        <div class="feature-name">Receipt Print</div>
+                        <div class="feature-status status-complete">Complete</div>
+                    </div>
+                    <div class="feature">
+                        <div class="feature-icon">⏰</div>
+                        <div class="feature-name">Live Clock</div>
+                        <div class="feature-status status-complete">Complete</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Test Matrix Section -->
+        <div id="test-matrix" class="section">
+            <div class="card">
+                <h3>Test Coverage Matrix</h3>
+                <p style="color: #6B7A8F; font-size: 0.9rem; margin-bottom: 1rem;">Areas that need testing before claiming "bug-free"</p>
+                <table class="test-matrix">
+                    <tr><th>Area</th><th>Test Case</th><th>Status</th></tr>
+                    <tr><td rowspan="4">Products</td><td>Load products on page load</td><td><span class="warn">!</span> Manual test</td></tr>
+                    <tr><td>Create new product with emoji</td><td><span class="warn">!</span> Manual test</td></tr>
+                    <tr><td>Toggle availability</td><td><span class="warn">!</span> Manual test</td></tr>
+                    <tr><td>Search/filter products</td><td><span class="warn">!</span> Manual test</td></tr>
+                    <tr><td rowspan="6">Orders</td><td>Add items to cart</td><td><span class="warn">!</span> Manual test</td></tr>
+                    <tr><td>Quantity +/- controls</td><td><span class="warn">!</span> Manual test</td></tr>
+                    <tr><td>Send to kitchen (pending)</td><td><span class="warn">!</span> Manual test</td></tr>
+                    <tr><td>Pay order (paid)</td><td><span class="warn">!</span> Manual test</td></tr>
+                    <tr><td>Cancel/delete order</td><td><span class="warn">!</span> Manual test</td></tr>
+                    <tr><td>Table number handling</td><td><span class="warn">!</span> Manual test</td></tr>
+                    <tr><td rowspan="3">KDS</td><td>Real-time order display</td><td><span class="warn">!</span> Manual test</td></tr>
+                    <tr><td>Status toggle (pending/prepared)</td><td><span class="warn">!</span> Manual test</td></tr>
+                    <tr><td>Audio alert on new order</td><td><span class="warn">!</span> Manual test</td></tr>
+                    <tr><td rowspan="3">Receipt</td><td>58mm thermal print</td><td><span class="warn">!</span> Manual test</td></tr>
+                    <tr><td>80mm thermal print</td><td><span class="warn">!</span> Manual test</td></tr>
+                    <tr><td>Branding details display</td><td><span class="warn">!</span> Manual test</td></tr>
+                    <tr><td rowspan="2">Admin</td><td>Password gate (admin123)</td><td><span class="warn">!</span> Manual test</td></tr>
+                    <tr><td>Manage mode toggles</td><td><span class="warn">!</span> Manual test</td></tr>
+                </table>
+            </div>
+        </div>
+
+        <!-- Multi-Agent Plan Section -->
+        <div id="agent-plan" class="section">
+            <div class="card">
+                <h3>Multi-Agent Architecture for Bug Testing & Development</h3>
+                <p style="color: #6B7A8F; margin-bottom: 1rem;">Proposed agent structure for systematic testing and feature development</p>
+
+                <div class="agent-flow">
+                    <div class="agent-box">
+                        🧠 Orchestrator Agent
+                        <div style="font-size: 0.85rem; font-weight: 400; margin-top: 0.25rem;">Coordinates testing workflow, assigns tasks, aggregates results</div>
+                    </div>
+                    <div style="text-align: center; color: #95A5A6;">↓</div>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 0.5rem;">
+                        <div class="agent-box secondary">
+                            🐛 Bug Hunter Agent
+                            <div style="font-size: 0.8rem; font-weight: 400; margin-top: 0.25rem;">Runs automated tests, finds edge cases</div>
+                        </div>
+                        <div class="agent-box tertiary">
+                            🔧 Fixer Agent
+                            <div style="font-size: 0.8rem; font-weight: 400; margin-top: 0.25rem;">Implements bug fixes</div>
+                        </div>
+                        <div class="agent-box secondary">
+                            ✨ Feature Agent
+                            <div style="font-size: 0.8rem; font-weight: 400; margin-top: 0.25rem;">Builds new features</div>
+                        </div>
+                    </div>
+                    <div style="text-align: center; color: #95A5A6;">↓</div>
+                    <div class="agent-box" style="background: linear-gradient(135deg, #2D3436 0%, #4A5568 100%);">
+                        📋 Reporter Agent
+                        <div style="font-size: 0.85rem; font-weight: 400; margin-top: 0.25rem;">Generates test reports, documents changes</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <h3>Recommended Next Steps</h3>
+                <ol style="padding-left: 1.5rem; color: #2D3436;">
+                    <li style="margin-bottom: 0.5rem;"><strong>Manual Testing Pass</strong> — Run through all features in the browser, note any bugs</li>
+                    <li style="margin-bottom: 0.5rem;"><strong>Automated Test Suite</strong> — Build pytest suite for API endpoints</li>
+                    <li style="margin-bottom: 0.5rem;"><strong>Multi-Agent Setup</strong> — Define agent roles, communication protocol, task handoff</li>
+                    <li style="margin-bottom: 0.5rem;"><strong>Feature Roadmap</strong> — Prioritize new features vs. bug fixes</li>
+                </ol>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function showSection(id) {
+            document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+            document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+            document.getElementById(id).classList.add('active');
+            event.target.classList.add('active');
+        }
+    </script>
+</body>
+</html>
