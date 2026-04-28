@@ -1,5 +1,33 @@
 # Updates Log
 
+## 2026-04-28 — UI polish, admin lock, live clock, search UX, receipt quality
+
+### Frontend (`templates/index.html`)
+
+- **Homepage polish**: Refined spacing, hierarchy, buttons, tabs, cards, shadows, and responsive behavior across the POS layout.
+- **Header updates**: Added a **live current-time clock** on POS homepage (similar to KDS).
+- **Search UX**:
+  - Improved visual treatment and focus state
+  - Native browser search decorations removed for cleaner appearance
+  - Clear (`✕`) button now works and only appears when search text exists
+  - Keyboard shortcuts: `/` to focus search, `Esc` to clear
+- **Admin lock mechanism**:
+  - Added lock/unlock status in admin bar
+  - Added lightweight password gating for admin actions
+  - Add Item, Manage Menu, and availability toggles now require unlock in UI
+- **Modal redesign**:
+  - Print/Kitchen and Payment modals now have distinct visual treatments
+  - Payment modal now includes live bill preview (not just total)
+  - Bill preview shows richer real-time metadata (table, items count, timestamp)
+- **Receipt quality upgrades**:
+  - Added branding details in receipt preview/print: cafe name, address, GSTIN, phone
+  - Added **payment method** and **cashier name** to receipt
+  - Added thermal paper selector (**58mm / 80mm**) in print modal
+  - Added receipt footer note
+- **Receipt-only printing**:
+  - Replaced full-page `window.print()` flow with receipt-only print output
+  - Print action now renders dedicated receipt markup/CSS and sends only receipt content to print dialog
+
 ## 2026-04-25 — Orders reliability, kitchen ticket UX, docs, Desserts
 
 ### Backend (`app.py`)
