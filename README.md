@@ -1,58 +1,53 @@
 # Cafe POS
 
-A simple point-of-sale system for an Indian cafe, built with Python Flask and PostgreSQL.
+**A point-of-sale system built for the rhythm of an Indian cafe.**
 
-## Features
+Flask + PostgreSQL backend, vanilla HTML/CSS/JS frontend. No dependencies, no build step — just open and run.
 
-- **Visual menu display** — Grid of items by category with emoji icons; includes **Desserts**
-- **Polished POS UI** — Improved header, cards, spacing, controls, and responsive layout for counter/tablet usage
-- **Search UX** — Search above category tabs with cleaner input UI, working clear button, and keyboard shortcuts (`/` focus, `Esc` clear)
-- **Order creation** — Tap items to add to order, adjust quantities with +/- buttons; **table number** on the order panel for service routing
-- **Kitchen ticket & billing** — Preview a draft ticket, then **Send to kitchen** to save as `pending`; **Pay** saves as `paid` in one step; receipt shows the **server order number** (unique `ORD-HHMMSS-###`)
-- **Bill generation** — Calculate subtotal + 18% GST; stored order totals are pre-GST line items
-- **Order history** — View recent orders with status (pending/prepared/paid)
-- **Quick stats + live clock** — Today's sales total, pending count, order count, and live current time in header
-- **Admin controls with lock** — Add items and manage availability behind lightweight lock/unlock password gate
-- **Payment modal** — Cash, Card/UPI, or QR code selection with live bill preview
-- **Kitchen ticket modal** — Draft/saved states with enhanced real-time bill details
-- **Manage Menu** — Toggle switches for quick enable/disable of items
-- **Receipt quality** — Receipt includes branding details (name/address/GSTIN/phone), payment method, cashier name
-- **Thermal printing** — 58mm / 80mm paper-size selector; **Print receipt** outputs receipt-only content (not the full web page)
+---
 
-## Tech Stack
+## What's inside
 
-- Backend: Python Flask + SQLAlchemy
-- Database: PostgreSQL (local)
-- Frontend: Vanilla HTML/CSS/JS
-- Currency: INR (Indian Rupees, stored in paisa)
+### Interface
 
-## Project Structure
+| Feature | Details |
+|---|---|
+| **Menu grid** | Items grouped by category (Beverages, Food, Snacks, Desserts) with emoji icons |
+| **Order panel** | Table number, line items with +/− controls, live subtotal + GST calculation |
+| **Search** | `/` to focus, `Esc` to clear — keyboard-first UX |
+| **Stats header** | Today's sales, pending count, order count, live clock |
+| **Manage Menu** | Toggle switches for availability — no extra buttons |
+
+### Workflows
+
+- **Send to Kitchen** — saves order as `pending`, opens kitchen ticket modal
+- **Pay** — single-step create with `status: paid`, opens receipt modal
+- **Print Receipt** — dedicated receipt layout (not full page), thermal size selector (58mm / 80mm)
+
+### Admin
+
+- Lock/unlock password gate blocks Add Item, Manage Menu, and availability toggles
+- Add Item modal with emoji picker for icon selection
+
+### Receipt
+
+Receipts include: cafe name, address, GSTIN, phone, order number, items, payment method, cashier name
+
+---
+
+## Tech stack
 
 ```
-pos/
-├── app.py              # Flask backend, API routes, DB models
-├── templates/
-│   └── index.html      # POS frontend
-├── SPEC.md             # Project specification
-├── README.md           # This file
-├── USAGE.md            # How to run and operate the POS
-├── DEBUG.md            # Debugging guide
-└── .gitignore         # Excludes memory files, venv, __pycache__
+Backend    Python Flask + SQLAlchemy
+Database   PostgreSQL 16 (local)
+Frontend   Vanilla HTML + CSS + JS
+Currency   INR stored in paisa (1 INR = 100 paisa)
+Timezone   IST via pytz
 ```
 
-## Prerequisites
+---
 
-- Python 3.9+
-- PostgreSQL 16+
-- Homebrew (for PostgreSQL installation on macOS)
-
-Install Python dependencies (from the project directory):
-
-```bash
-pip install flask flask-sqlalchemy psycopg2-binary pytz
-```
-
-## Quick Start
+## Quick start
 
 ```bash
 # 1. Start PostgreSQL
@@ -61,25 +56,65 @@ brew services start postgresql@16
 # 2. Create database
 createdb cafe_pos
 
-# 3. Run the app (use your clone path)
+# 3. Run
 cd /path/to/pos
 /usr/bin/python3 app.py
 
-# 4. Open in browser
-http://127.0.0.1:5555
+# 4. Open
+open http://127.0.0.1:5555
 ```
 
-## Receipt Configuration
+**Dependencies:** `flask flask-sqlalchemy psycopg2-binary pytz`
 
-Current receipt brand details are set in `templates/index.html` via `RECEIPT_BRAND`:
+---
 
-- `name`
-- `address`
-- `gstin`
-- `phone`
+## Project files
 
-You can update these values to match your cafe identity and compliance details.
+```
+pos/
+├── app.py              Flask API, SQLAlchemy models, menu seeding
+├── templates/
+│   └── index.html      Full POS frontend
+├── SPEC.md             Data model and feature spec
+├── UPDATES.md          Changelog
+├── USAGE.md            How to run and operate
+├── DEBUG.md            Debugging steps
+└── CLAUDE.md           Developer context
+```
+
+---
+
+## API reference
+
+| Method | Endpoint | Description |
+|---|---|---|
+| `GET` | `/api/products` | List available products |
+| `POST` | `/api/products` | Create product |
+| `PATCH` | `/api/products/:id` | Update product |
+| `GET` | `/api/orders` | List recent orders |
+| `POST` | `/api/orders` | Create order (`status: paid` for immediate payment) |
+| `PATCH` | `/api/orders/:id` | Update order status |
+| `DELETE` | `/api/orders/:id` | Delete order and its items |
+| `GET` | `/api/stats` | Today's sales, pending count, order count |
+
+---
+
+## Data model
+
+**Products** — `id, name, category, price (paisa), is_available, image (emoji)`
+
+**Orders** — `id, order_number (ORD-HHMMSS-###), table_number, status, total (paisa), created_at`
+
+**OrderItems** — `id, order_id, product_id, quantity, price (snapshot at order time)`
+
+---
+
+## Receipt branding
+
+Edit `RECEIPT_BRAND` in `templates/index.html` to set your cafe's name, address, GSTIN, and phone — shown on every printed receipt.
+
+---
 
 ## GitHub
 
-Repository: https://github.com/chaitanyasunny/pos-cafe-india.git
+https://github.com/chaitanyasunny/pos-cafe-india.git
