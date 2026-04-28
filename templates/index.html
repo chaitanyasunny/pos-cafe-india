@@ -155,15 +155,22 @@
 
         .payment-summary { margin-bottom: 0.75rem; }
         .payment-summary-chip { display: inline-flex; align-items: center; gap: 0.35rem; font-size: 0.72rem; font-weight: 700; color: #3E4A61; background: #F1F5FB; border: 1px solid #D8E1F0; padding: 0.2rem 0.5rem; border-radius: 999px; margin-bottom: 0.6rem; }
+        .modal-print { max-height: min(92vh, 860px); display: flex; flex-direction: column; }
+        .modal-print .modal-body { overflow-y: auto; padding-right: 0.2rem; margin-bottom: 0.55rem; }
+        .modal-print .modal-actions { position: sticky; bottom: 0; background: white; border-top: 1px solid #E8EDF4; margin: 0 -1.1rem -1.1rem; padding: 0.8rem 1.1rem 1.1rem; }
+        .modal-payment { max-height: min(92vh, 860px); display: flex; flex-direction: column; }
+        .modal-payment .modal-body { overflow-y: auto; padding-right: 0.2rem; margin-bottom: 0.55rem; }
+        .modal-payment .modal-actions { position: sticky; bottom: 0; background: white; border-top: 1px solid #E8EDF4; margin: 0 -1.1rem -1.1rem; padding: 0.8rem 1.1rem 1.1rem; }
 
         /* Payment options */
         .payment-options { display: flex; flex-direction: column; gap: 0.5rem; }
-        .payment-option { display: flex; align-items: center; gap: 0.5rem; padding: 0.72rem; border: 2px solid #E7ECF4; border-radius: 10px; cursor: pointer; transition: all 0.15s; background: #FCFDFF; }
+        .payment-option { display: flex; align-items: center; gap: 0.6rem; padding: 0.75rem 0.78rem; border: 2px solid #E7ECF4; border-radius: 10px; cursor: pointer; transition: all 0.15s; background: #FCFDFF; }
         .payment-option:hover { border-color: #FFC2C2; background: #FFF7F7; }
         .payment-option.selected { border-color: #FF6B6B; background: #FFF3F3; box-shadow: 0 5px 12px rgba(255,107,107,0.13); }
         .payment-option input { display: none; }
-        .payment-option .icon { font-size: 1.25rem; }
-        .payment-option .method-meta { margin-left: auto; font-size: 0.7rem; color: #7B8797; }
+        .payment-option .icon { font-size: 1.25rem; width: 1.6rem; text-align: center; }
+        .payment-option .method-title { font-size: 0.96rem; font-weight: 700; color: #233246; }
+        .payment-option .method-meta { margin-left: auto; font-size: 0.72rem; color: #7B8797; font-weight: 600; }
 
         /* Toggle switch */
         .toggle-switch { position: relative; width: 44px; height: 24px; }
@@ -172,10 +179,6 @@
         .toggle-slider:before { position: absolute; content: ""; height: 18px; width: 18px; left: 3px; bottom: 3px; background-color: white; transition: 0.2s; border-radius: 50%; }
         .toggle-switch input:checked + .toggle-slider { background-color: #FF6B6B; }
         .toggle-switch input:checked + .toggle-slider:before { transform: translateX(20px); }
-
-        /* QR Payment option */
-        .qr-option { flex-direction: column; align-items: center; gap: 0.25rem; }
-        .qr-code { width: 80px; height: 80px; background: #FFF; border: 2px solid #EEE; border-radius: 8px; display: flex; align-items: center; justify-content: center; margin: 0.5rem auto; font-size: 0.7rem; color: #AAA; }
 
         /* Image picker in modal */
         .image-picker { display: flex; flex-wrap: wrap; gap: 0.5rem; justify-content: center; margin: 0.75rem 0; }
@@ -344,20 +347,14 @@
                     <label class="payment-option" onclick="selectPayment(this)">
                         <input type="radio" name="payment" value="cash">
                         <span class="icon">💵</span>
-                        <span>Cash</span>
+                        <span class="method-title">Cash</span>
                         <span class="method-meta">Counter</span>
                     </label>
                     <label class="payment-option" onclick="selectPayment(this)">
                         <input type="radio" name="payment" value="card">
                         <span class="icon">💳</span>
-                        <span>Card/UPI</span>
+                        <span class="method-title">Card/UPI</span>
                         <span class="method-meta">Card or UPI</span>
-                    </label>
-                    <label class="payment-option qr-option" onclick="selectPayment(this)">
-                        <input type="radio" name="payment" value="qr">
-                        <span class="icon">📱</span>
-                        <span>QR Code</span>
-                        <div class="qr-code">QR</div>
                     </label>
                 </div>
             </div>
