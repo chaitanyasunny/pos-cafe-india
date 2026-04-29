@@ -911,8 +911,8 @@
                     </div>
                     <div class="order-actions">
                         <span class="order-status status-${o.status}">${o.status.toUpperCase()}</span>
-                        ${o.status !== 'paid' ? `<button class="btn-small btn-mark-paid" onclick="payExistingOrder(${o.id})">Pay</button>` : ''}
                         ${o.status === 'pending' ? `<button class="btn-small btn-prepare" onclick="updateOrderStatus(${o.id}, 'prepared')">Ready</button>` : ''}
+                        ${o.status !== 'paid' ? `<button class="btn-small btn-mark-paid" onclick="payExistingOrder(${o.id})">Pay</button>` : ''}
                         ${o.status !== 'paid' ? `<button class="btn-small btn-cancel" onclick="cancelOrder(${o.id})">X</button>` : ''}
                     </div>
                 </div>
