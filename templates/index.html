@@ -106,6 +106,7 @@
         .order-actions { display: flex; gap: 0.3rem; }
         .btn-small { padding: 0.25rem 0.5rem; border: none; border-radius: 4px; font-size: 0.7rem; cursor: pointer; }
         .btn-prepare { background: #74B9FF; color: white; }
+        .btn-mark-paid { background: #55EFC4; color: #155C44; font-weight: 700; }
         .btn-cancel { background: #FF6B6B; color: white; }
 
         .menu-item.unavailable { opacity: 0.4; cursor: not-allowed; pointer-events: none; }
@@ -383,10 +384,12 @@
         let currentOrder = [];
         let currentCategory = 'All';
         let selectedPaymentMethod = null;
+        let paymentOrderContext = null;
         let manageMode = false;
         let menuSearch = '';
         let adminUnlocked = false;
         let lastReceiptContext = null;
+        let recentOrdersCache = [];
         const GST_RATE = 0.18;
         const ADMIN_PASSWORD = 'admin123';
         const RECEIPT_BRAND = {
@@ -599,11 +602,36 @@
                 alert('Please add items to the order first');
                 return;
             }
+            paymentOrderContext = null;
+            openPaymentModal();
+        }
+
+        function payExistingOrder(orderId) {
+            const order = recentOrdersCache.find(o => o.id === orderId);
+            if (!order) {
+                alert('Order not found');
+                return;
+            }
+            if (order.status === 'paid') {
+                alert('Order is already paid');
+                return;
+            }
+            paymentOrderContext = {
+                id: order.id,
+                order_number: order.order_number,
+                table_number: order.table_number || 1,
+                items: (order.items || []).map(item => ({
+                    name: item.product_name || '',
+                    quantity: item.quantity || 1,
+                    price: item.price || 0
+                }))
+            };
             openPaymentModal();
         }
 
         function billCoreTotals() {
-            const subtotal = currentOrder.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+            const sourceItems = paymentOrderContext ? paymentOrderContext.items : currentOrder;
+            const subtotal = sourceItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
             const gst = orderGstPaisa(subtotal);
             const total = subtotal + gst;
             return { subtotal, gst, total };
@@ -612,7 +640,6 @@
         function paymentLabel(method) {
             if (method === 'cash') return 'Cash';
             if (method === 'card') return 'Card/UPI';
-            if (method === 'qr') return 'QR Code';
             return 'Kitchen Ticket';
         }
 
@@ -630,8 +657,11 @@
         function buildBillPreview(orderRef, mode = 'ticket', method = null, cashierName = 'Counter 1', paperSize = '58') {
             const { subtotal, gst, total } = billCoreTotals();
             const tableInput = document.getElementById('tableNumber');
-            const tableNumber = tableInput ? (parseInt(tableInput.value, 10) || 1) : 1;
-            const itemsCount = currentOrder.reduce((sum, item) => sum + item.quantity, 0);
+            const sourceItems = paymentOrderContext ? paymentOrderContext.items : currentOrder;
+            const tableNumber = paymentOrderContext
+                ? paymentOrderContext.table_number
+                : (tableInput ? (parseInt(tableInput.value, 10) || 1) : 1);
+            const itemsCount = sourceItems.reduce((sum, item) => sum + item.quantity, 0);
             const statusLine = orderRef
                 ? orderRef
                 : mode === 'payment'
@@ -658,7 +688,7 @@
                     <div class="bill-meta">Payment: ${paymentLabel(method)}</div>
                 </div>
                 <div class="bill-items">
-                    ${currentOrder.map(item => `
+                    ${sourceItems.map(item => `
                         <div class="bill-row-display">
                             <span>${item.name} x${item.quantity}</span>
                             <span>Rs ${(item.price * item.quantity / 100).toFixed(0)}</span>
@@ -815,7 +845,13 @@
             }
             const payBtn = document.querySelector('#paymentModal .btn-pay');
             if (payBtn) payBtn.disabled = true;
-            const order = await createOrder('paid');
+            let order = null;
+            if (paymentOrderContext) {
+                await updateOrderStatus(paymentOrderContext.id, 'paid');
+                order = { order_number: paymentOrderContext.order_number };
+            } else {
+                order = await createOrder('paid');
+            }
             if (payBtn) payBtn.disabled = false;
             if (!order) return;
             closePaymentModal();
@@ -827,6 +863,7 @@
                 <button type="button" class="btn btn-secondary" onclick="closePrintModal(); currentOrder = []; renderOrder();">Close</button>
                 <button type="button" class="btn btn-print" onclick="printReceiptOnly(); closePrintModal(); currentOrder = []; renderOrder();">Print receipt</button>
             `;
+            paymentOrderContext = null;
         }
 
         async function updateOrderStatus(orderId, status) {
@@ -864,6 +901,7 @@
         async function loadRecentOrders() {
             const res = await fetch('/api/orders');
             const orders = await res.json();
+            recentOrdersCache = orders;
             const container = document.getElementById('recentOrders');
             container.innerHTML = orders.slice(0, 10).map(o => `
                 <div class="past-order">
@@ -874,6 +912,7 @@
                     <div class="order-actions">
                         <span class="order-status status-${o.status}">${o.status.toUpperCase()}</span>
                         ${o.status === 'pending' ? `<button class="btn-small btn-prepare" onclick="updateOrderStatus(${o.id}, 'prepared')">Ready</button>` : ''}
+                        ${o.status !== 'paid' ? `<button class="btn-small btn-mark-paid" onclick="payExistingOrder(${o.id})">Pay</button>` : ''}
                         ${o.status !== 'paid' ? `<button class="btn-small btn-cancel" onclick="cancelOrder(${o.id})">X</button>` : ''}
                     </div>
                 </div>
