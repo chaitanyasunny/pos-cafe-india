@@ -165,18 +165,29 @@
         async function loadOrders() {
             try {
                 const res = await fetch('/api/orders?status=pending,prepared');
+                if (!res.ok) {
+                    throw new Error(`Orders API failed with ${res.status}`);
+                }
                 orders = await res.json();
 
                 const currentPendingIds = new Set(orders.filter(o => o.status === 'pending').map(o => o.id));
                 const newPending = [...currentPendingIds].filter(id => !previousPendingIds.has(id));
-                if (newPending.length > 0) {
-                    playAlert();
-                }
                 previousPendingIds = currentPendingIds;
 
                 renderOrders();
+                if (newPending.length > 0) {
+                    try {
+                        playAlert();
+                    } catch (audioErr) {
+                        console.warn('Audio alert blocked:', audioErr);
+                    }
+                }
             } catch (e) {
                 console.error('Failed to load orders:', e);
+                const grid = document.getElementById('ordersGrid');
+                if (grid) {
+                    grid.innerHTML = '<div class="no-orders">Unable to load orders. Press R to retry.</div>';
+                }
             }
         }
 

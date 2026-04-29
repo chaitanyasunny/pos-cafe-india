@@ -150,6 +150,30 @@ def ensure_desserts_category():
     db.session.commit()
 
 
+def ensure_schema_columns():
+    """Best-effort column backfill for older local databases."""
+    try:
+        inspector = db.inspect(db.engine)
+    except Exception:
+        return
+
+    products_cols = {c['name'] for c in inspector.get_columns('products')}
+    orders_cols = {c['name'] for c in inspector.get_columns('orders')}
+
+    stmts = []
+    if 'image' not in products_cols:
+        stmts.append("ALTER TABLE products ADD COLUMN image VARCHAR(255)")
+    if 'table_number' not in orders_cols:
+        stmts.append("ALTER TABLE orders ADD COLUMN table_number INTEGER")
+
+    if not stmts:
+        return
+
+    for sql in stmts:
+        db.session.execute(db.text(sql))
+    db.session.commit()
+
+
 def merge_duplicate_products():
     """For identical (category, name), keep the lowest id; re-point order lines and remove extras."""
     groups = defaultdict(list)
@@ -175,6 +199,7 @@ def before_first():
     if not hasattr(app, '_seeded'):
         with app.app_context():
             db.create_all()
+            ensure_schema_columns()
             seed_products()
             ensure_desserts_category()
             merge_duplicate_products()
