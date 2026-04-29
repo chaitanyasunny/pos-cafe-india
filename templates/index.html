@@ -884,8 +884,25 @@
         }
 
         async function loadProducts() {
-            const res = await fetch('/api/products');
-            products = await res.json();
+            try {
+                const res = await fetch('/api/products');
+                if (!res.ok) {
+                    throw new Error(`Products API failed: ${res.status}`);
+                }
+                products = await res.json();
+            } catch (e) {
+                console.error('Failed to load products:', e);
+                products = [];
+                const tabs = document.getElementById('categoryTabs');
+                if (tabs) {
+                    tabs.innerHTML = '<button class="category-tab active" type="button">All</button>';
+                }
+                const grid = document.getElementById('menuGrid');
+                if (grid) {
+                    grid.innerHTML = '<div class="menu-no-results" style="grid-column:1/-1;text-align:center;color:#999;padding:1.5rem 0.5rem;font-size:0.9rem;">Unable to load menu items. Refresh to retry.</div>';
+                }
+                return;
+            }
             renderCategories();
             renderMenu();
         }
